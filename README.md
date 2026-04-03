@@ -1,4 +1,6 @@
-![Rolling Vine logo](images/logo_full.png)
+<p align="center">
+	<img src="images/logo_full.png" alt="Rolling Vine logo" />
+</p>
 
 Rolling Vine is a cross-browser WebExtension (Chrome + Firefox) for Amazon Vine users.
 It adds rolling periods statistics to the Vine Account page and highlights risk windows where review completion rate is below 60%.
@@ -21,7 +23,9 @@ On the Vine Account page (`/vine/account`), the extension injects:
 	- `Last sync: <timestamp>` label
 - A compact donation row with links to Ko-fi and PayPal
 
-![Rolling Vine screenshot](images/screenshot.png)
+<p align="center">
+	<img src="images/screenshot.png" alt="Rolling Vine screenshot" />
+</p>
 
 ## How Sync Works
 
