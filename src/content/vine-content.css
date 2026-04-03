@@ -1,0 +1,157 @@
+.rolling-vine-root {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #d5d9d9;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  font-family: "Amazon Ember", "Segoe UI", "Helvetica Neue", sans-serif;
+  color: #0f1111;
+}
+
+.rolling-vine-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rolling-vine-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.rolling-vine-sync-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #879596;
+  border-radius: 999px;
+  background: #f3f3f3;
+  color: #0f1111;
+  font-size: 13px;
+  line-height: 1;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.rolling-vine-sync-btn:hover:not(:disabled) {
+  background: #e7e7e7;
+}
+
+.rolling-vine-sync-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.rolling-vine-sync-icon {
+  display: block;
+  height: 16px;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.rolling-vine-sync-btn.is-syncing .rolling-vine-sync-icon {
+  animation: rolling-vine-spin 1s linear infinite;
+}
+
+@keyframes rolling-vine-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rolling-vine-last-sync,
+.rolling-vine-stage {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #565959;
+}
+
+.rolling-vine-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.rolling-vine-card {
+  border: 1px solid #d5d9d9;
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.rolling-vine-card h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rolling-vine-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.rolling-vine-card.is-risk {
+  border-color: #c40000;
+  background: #fff5f5;
+  box-shadow: inset 0 0 0 1px rgba(196, 0, 0, 0.12);
+}
+
+.rolling-vine-donation {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e3e6e6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.rolling-vine-donation-label {
+  font-size: 12px;
+  color: #565959;
+}
+
+.rolling-vine-donate-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #a2a6ac;
+  border-radius: 999px;
+  background: #f7fafa;
+  color: #0f1111;
+  text-decoration: none;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.rolling-vine-donate-btn img {
+  display: block;
+  height: 18px;
+  width: auto;
+}
+
+.rolling-vine-donate-btn:hover {
+  background: #eef3f3;
+}
+
+@media (max-width: 900px) {
+  .rolling-vine-grid {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 580px) {
+  .rolling-vine-grid {
+    grid-template-columns: 1fr;
+  }
+}

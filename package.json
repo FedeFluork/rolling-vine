@@ -1,0 +1,21 @@
+{
+  "name": "rolling-vine",
+  "version": "1.0.0",
+  "description": "Cross-browser extension for Amazon Vine rolling periods review risk (30/60/90 days).",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "node scripts/build.js",
+    "build:chrome": "node scripts/build.js chrome",
+    "build:firefox": "node scripts/build.js firefox",
+    "zip": "node scripts/zip.js",
+    "lint": "web-ext lint --source-dir src --ignore-files tests",
+    "dev:firefox": "web-ext run --source-dir src"
+  },
+  "devDependencies": {
+    "web-ext": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
