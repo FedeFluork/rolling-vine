@@ -6,6 +6,8 @@ const MAX_PAGES_PER_SECTION = 40;
 const PAGE_SETTLE_MIN_MS = 700;
 const PAGE_SETTLE_MAX_MS = 1400;
 const PAGE_LOAD_TIMEOUT_MS = 25000;
+const EXTRACT_ATTEMPTS = 5;
+const EXTRACT_RETRY_DELAY_MS = 900;
 const LOG_PREFIX = "[rolling-vine/bg]";
 
 let runningJob = null;
@@ -92,6 +94,7 @@ async function runSync({ origin, accountTabId }) {
 
   try {
     tempTabId = await createHiddenTab(`${origin}/vine/orders`);
+    await restoreAccountTabFocus(accountTabId);
 
     const ordersResult = await scanSection({
       tabId: tempTabId,
@@ -174,8 +177,9 @@ async function scanSection({ tabId, origin, section, accountTabId, nowMs }) {
     await navigateTab(tabId, url);
     await waitForTabComplete(tabId, PAGE_LOAD_TIMEOUT_MS);
     await randomDelay(PAGE_SETTLE_MIN_MS, PAGE_SETTLE_MAX_MS);
+    await restoreAccountTabFocus(accountTabId);
 
-    const response = await extractFromTab(tabId, section, nowMs);
+    const response = await extractFromTabWithRetries(tabId, section, nowMs);
 
     if (!response || !response.ok) {
       const reason = response && response.reason ? response.reason : "Unexpected extraction failure";
@@ -297,6 +301,38 @@ function extractFromTab(tabId, section, nowMs) {
   });
 }
 
+async function extractFromTabWithRetries(tabId, section, nowMs) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= EXTRACT_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await extractFromTab(tabId, section, nowMs);
+      const needsRetry =
+        !response ||
+        response.ok === false ||
+        !Array.isArray(response.items) ||
+        response.items.length === 0;
+
+      if (!needsRetry) {
+        return response;
+      }
+
+      lastError = new Error(response && response.reason ? response.reason : "no parsable records found");
+
+      if (attempt < EXTRACT_ATTEMPTS) {
+        await randomDelay(EXTRACT_RETRY_DELAY_MS, EXTRACT_RETRY_DELAY_MS + 400);
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < EXTRACT_ATTEMPTS) {
+        await randomDelay(EXTRACT_RETRY_DELAY_MS, EXTRACT_RETRY_DELAY_MS + 400);
+      }
+    }
+  }
+
+  throw lastError || new Error("Unable to extract page data");
+}
+
 function closeTabSafe(tabId) {
   return new Promise((resolve) => {
     chrome.tabs.remove(tabId, () => resolve());
@@ -314,5 +350,18 @@ function notifyAccount(tabId, message) {
   }
   chrome.tabs.sendMessage(tabId, message, () => {
     void chrome.runtime.lastError;
+  });
+}
+
+function restoreAccountTabFocus(tabId) {
+  if (typeof tabId !== "number") {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    chrome.tabs.update(tabId, { active: true }, () => {
+      void chrome.runtime.lastError;
+      resolve();
+    });
   });
 }

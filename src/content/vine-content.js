@@ -4,6 +4,8 @@
   const REVIEWS_PATH = "/vine/vine-reviews";
   const LOG_PREFIX = "[rolling-vine/content]";
   const HYDRATE_RETRY_DELAYS_MS = [0, 250, 800, 1600];
+  const START_SYNC_ATTEMPTS = 3;
+  const START_SYNC_RETRY_DELAY_MS = 500;
 
   let rootEl = null;
   let lastKnownHref = location.href;
@@ -125,17 +127,41 @@
       .catch(() => undefined);
   }
 
-  function sendRuntimeMessage(message) {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(message, (response) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(new Error(err.message));
-          return;
+  async function sendRuntimeMessage(message) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= START_SYNC_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage(message, (nextResponse) => {
+            const err = chrome.runtime.lastError;
+            if (err) {
+              reject(new Error(err.message));
+              return;
+            }
+            resolve(nextResponse);
+          });
+        });
+
+        if (!response && attempt < START_SYNC_ATTEMPTS) {
+          await delay(START_SYNC_RETRY_DELAY_MS * attempt);
+          continue;
         }
-        resolve(response);
-      });
-    });
+
+        return response;
+      } catch (error) {
+        lastError = error;
+        if (attempt < START_SYNC_ATTEMPTS) {
+          await delay(START_SYNC_RETRY_DELAY_MS * attempt);
+        }
+      }
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
+
+    throw new Error("No response from background sync handler");
   }
 
   function isAccountPage() {
@@ -207,7 +233,7 @@
 
     const selectors = [
       'td.vvp-orders-table--text-col[data-order-timestamp]',
-      'span.vvp-order-date[data-order-timestamp]'
+      'span[data-order-timestamp]'
     ];
 
     for (const selector of selectors) {
@@ -236,7 +262,7 @@
 
     const selectors = [
       'td.vvp-reviews-table--text-col[data-order-timestamp]',
-      'span.vvp-order-date[data-order-timestamp]'
+      'span[data-order-timestamp]'
     ];
 
     for (const selector of selectors) {
@@ -560,5 +586,9 @@
 
       card.classList.toggle("is-risk", periodMetrics.status === "at-risk");
     }
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 })();
