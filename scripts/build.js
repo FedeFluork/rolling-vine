@@ -9,6 +9,10 @@ const distDir = path.join(rootDir, "dist");
 function copyRecursive(source, target) {
   fs.mkdirSync(target, { recursive: true });
   for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    if (entry.name === ".DS_Store") {
+      continue;
+    }
+
     const sourcePath = path.join(source, entry.name);
     const targetPath = path.join(target, entry.name);
     if (entry.isDirectory()) {
@@ -39,6 +43,10 @@ function buildTarget(target) {
         strict_min_version: "121.0"
       }
     };
+
+    manifest.background = manifest.background || {};
+    delete manifest.background.service_worker;
+    manifest.background.scripts = ["background/service-worker.js"];
   }
 
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");

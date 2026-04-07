@@ -180,7 +180,7 @@
 
     rootEl = document.createElement("section");
     rootEl.className = "rolling-vine-root";
-    rootEl.innerHTML = buildAccountMarkup();
+  rootEl.appendChild(buildAccountLayout());
     anchor.appendChild(rootEl);
 
     const syncBtn = rootEl.querySelector(".rolling-vine-sync-btn");
@@ -224,44 +224,118 @@
     return document.body;
   }
 
-  function buildAccountMarkup() {
-    return `
-      <div class="rolling-vine-header-row">
-        <h3 class="rolling-vine-title">Rolling Vine</h3>
-        <button class="rolling-vine-sync-btn" type="button">
-          <img alt="Sync icon" class="rolling-vine-sync-icon">
-          Sync my Vine history
-        </button>
-      </div>
-      <div class="rolling-vine-last-sync">Last sync: <span data-sync-value>Never</span></div>
-      <div class="rolling-vine-stage" data-sync-stage></div>
-      <div class="rolling-vine-grid">
-        ${buildCard(90)}
-        ${buildCard(60)}
-        ${buildCard(30)}
-      </div>
-      <div class="rolling-vine-donation">
-        <span class="rolling-vine-donation-label">Support this extension:</span>
-        <a href="#" data-donation="kofi" class="rolling-vine-donate-btn rolling-vine-donate-kofi" aria-label="Donate with Ko-fi">
-          <img alt="Ko-fi">
-        </a>
-        <a href="#" data-donation="paypal" class="rolling-vine-donate-btn rolling-vine-donate-paypal" aria-label="Donate with PayPal">
-          <img alt="PayPal">
-        </a>
-      </div>
-    `;
+  function buildAccountLayout() {
+    const fragment = document.createDocumentFragment();
+
+    const headerRow = document.createElement("div");
+    headerRow.className = "rolling-vine-header-row";
+
+    const title = document.createElement("h3");
+    title.className = "rolling-vine-title";
+    title.textContent = "Rolling Vine";
+
+    const syncBtn = document.createElement("button");
+    syncBtn.className = "rolling-vine-sync-btn";
+    syncBtn.type = "button";
+
+    const syncIcon = document.createElement("img");
+    syncIcon.className = "rolling-vine-sync-icon";
+    syncIcon.alt = "Sync icon";
+
+    syncBtn.appendChild(syncIcon);
+    syncBtn.appendChild(document.createTextNode("Sync my Vine history"));
+    headerRow.appendChild(title);
+    headerRow.appendChild(syncBtn);
+
+    const lastSync = document.createElement("div");
+    lastSync.className = "rolling-vine-last-sync";
+    lastSync.appendChild(document.createTextNode("Last sync: "));
+
+    const syncValue = document.createElement("span");
+    syncValue.setAttribute("data-sync-value", "");
+    syncValue.textContent = "Never";
+    lastSync.appendChild(syncValue);
+
+    const stage = document.createElement("div");
+    stage.className = "rolling-vine-stage";
+    stage.setAttribute("data-sync-stage", "");
+
+    const grid = document.createElement("div");
+    grid.className = "rolling-vine-grid";
+    grid.appendChild(buildCard(90));
+    grid.appendChild(buildCard(60));
+    grid.appendChild(buildCard(30));
+
+    const donation = document.createElement("div");
+    donation.className = "rolling-vine-donation";
+
+    const donationLabel = document.createElement("span");
+    donationLabel.className = "rolling-vine-donation-label";
+    donationLabel.textContent = "Support this extension:";
+
+    const kofiLink = document.createElement("a");
+    kofiLink.href = "#";
+    kofiLink.className = "rolling-vine-donate-btn rolling-vine-donate-kofi";
+    kofiLink.setAttribute("data-donation", "kofi");
+    kofiLink.setAttribute("aria-label", "Donate with Ko-fi");
+    const kofiImg = document.createElement("img");
+    kofiImg.alt = "Ko-fi";
+    kofiLink.appendChild(kofiImg);
+
+    const paypalLink = document.createElement("a");
+    paypalLink.href = "#";
+    paypalLink.className = "rolling-vine-donate-btn rolling-vine-donate-paypal";
+    paypalLink.setAttribute("data-donation", "paypal");
+    paypalLink.setAttribute("aria-label", "Donate with PayPal");
+    const paypalImg = document.createElement("img");
+    paypalImg.alt = "PayPal";
+    paypalLink.appendChild(paypalImg);
+
+    donation.appendChild(donationLabel);
+    donation.appendChild(kofiLink);
+    donation.appendChild(paypalLink);
+
+    fragment.appendChild(headerRow);
+    fragment.appendChild(lastSync);
+    fragment.appendChild(stage);
+    fragment.appendChild(grid);
+    fragment.appendChild(donation);
+
+    return fragment;
   }
 
   function buildCard(period) {
-    return `
-      <article class="rolling-vine-card" data-period="${period}">
-        <h4>Last ${period} days</h4>
-        <div class="rolling-vine-row"><span>Orders</span><strong data-field="orders">0</strong></div>
-        <div class="rolling-vine-row"><span>Reviews</span><strong data-field="reviews">0</strong></div>
-        <div class="rolling-vine-row"><span>Review rate</span><strong data-field="rate">N/A</strong></div>
-        <div class="rolling-vine-row"><span>Status</span><strong data-field="status">OK</strong></div>
-      </article>
-    `;
+    const card = document.createElement("article");
+    card.className = "rolling-vine-card";
+    card.setAttribute("data-period", String(period));
+
+    const title = document.createElement("h4");
+    title.textContent = `Last ${period} days`;
+    card.appendChild(title);
+
+    card.appendChild(buildCardRow("Orders", "orders", "0"));
+    card.appendChild(buildCardRow("Reviews", "reviews", "0"));
+    card.appendChild(buildCardRow("Review rate", "rate", "N/A"));
+    card.appendChild(buildCardRow("Status", "status", "OK"));
+
+    return card;
+  }
+
+  function buildCardRow(labelText, fieldName, valueText) {
+    const row = document.createElement("div");
+    row.className = "rolling-vine-row";
+
+    const label = document.createElement("span");
+    label.textContent = labelText;
+
+    const value = document.createElement("strong");
+    value.setAttribute("data-field", fieldName);
+    value.textContent = valueText;
+
+    row.appendChild(label);
+    row.appendChild(value);
+
+    return row;
   }
 
   function wireDonationLinks() {
