@@ -27,7 +27,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "rollingVine.startSync") {
     console.log(`${LOG_PREFIX} startSync requested`, sender && sender.tab ? sender.tab.url : "no-tab");
-    handleStartSync(sender)
+    handleStartSync(sender, message)
       .then((state) => sendResponse({ ok: true, state }))
       .catch((error) => {
         console.error(`${LOG_PREFIX} startSync failed`, error && error.stack ? error.stack : error);
@@ -37,19 +37,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-async function handleStartSync(sender) {
+async function handleStartSync(sender, message) {
   if (runningJob) {
     console.log(`${LOG_PREFIX} sync already running`);
     return RollingVineStorage.getSyncState();
   }
 
-  const senderUrl = sender && sender.tab && sender.tab.url ? new URL(sender.tab.url) : null;
+  const rawPageUrl =
+    (message && typeof message.pageUrl === "string" && message.pageUrl) ||
+    (sender && sender.tab && typeof sender.tab.url === "string" && sender.tab.url) ||
+    (sender && typeof sender.url === "string" && sender.url) ||
+    null;
+
+  const senderUrl = rawPageUrl ? new URL(rawPageUrl) : null;
   if (!senderUrl) {
     throw new Error("Unable to identify account page URL.");
   }
 
-  const origin = senderUrl.origin;
-  const accountTabId = sender.tab.id;
+  const origin =
+    message && typeof message.origin === "string" && message.origin
+      ? message.origin
+      : senderUrl.origin;
+  const accountTabId = sender && sender.tab && typeof sender.tab.id === "number" ? sender.tab.id : null;
 
   runningJob = runSync({ origin, accountTabId })
     .catch(() => undefined)
@@ -57,7 +66,12 @@ async function handleStartSync(sender) {
       runningJob = null;
     });
 
-  return RollingVineStorage.getSyncState();
+  return {
+    status: "running",
+    isRunning: true,
+    stage: "orders",
+    lastError: null
+  };
 }
 
 async function runSync({ origin, accountTabId }) {

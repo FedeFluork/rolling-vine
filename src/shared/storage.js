@@ -4,24 +4,61 @@
     metrics: "rollingVine.metrics"
   };
 
+  const hasBrowserStorage =
+    typeof globalThis.browser !== "undefined" &&
+    globalThis.browser &&
+    globalThis.browser.storage &&
+    globalThis.browser.storage.local;
+
   function callChrome(method, ...args) {
     return new Promise((resolve, reject) => {
-      method(...args, (result) => {
+      let settled = false;
+
+      function finishWithError(error) {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        reject(error);
+      }
+
+      function finishWithResult(result) {
+        if (settled) {
+          return;
+        }
+        settled = true;
         const err = chrome.runtime.lastError;
         if (err) {
           reject(new Error(err.message));
           return;
         }
         resolve(result);
-      });
+      }
+
+      try {
+        const maybePromise = method(...args, finishWithResult);
+        if (maybePromise && typeof maybePromise.then === "function") {
+          maybePromise.then(finishWithResult).catch((error) => {
+            finishWithError(error instanceof Error ? error : new Error(String(error)));
+          });
+        }
+      } catch (error) {
+        finishWithError(error instanceof Error ? error : new Error(String(error)));
+      }
     });
   }
 
   function getStorage(keys) {
+    if (hasBrowserStorage) {
+      return globalThis.browser.storage.local.get(keys);
+    }
     return callChrome(chrome.storage.local.get.bind(chrome.storage.local), keys);
   }
 
   function setStorage(value) {
+    if (hasBrowserStorage) {
+      return globalThis.browser.storage.local.set(value);
+    }
     return callChrome(chrome.storage.local.set.bind(chrome.storage.local), value);
   }
 

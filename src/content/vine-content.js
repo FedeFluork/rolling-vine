@@ -1,10 +1,12 @@
 (() => {
-  const ACCOUNT_PATH = "/vine/account";
+  const ACCOUNT_PATH_REGEX = /^\/vine\/account\/?$/;
   const ORDERS_PATH = "/vine/orders";
   const REVIEWS_PATH = "/vine/vine-reviews";
   const LOG_PREFIX = "[rolling-vine/content]";
+  const HYDRATE_RETRY_DELAYS_MS = [0, 250, 800, 1600];
 
   let rootEl = null;
+  let lastKnownHref = location.href;
 
   window.addEventListener("error", (event) => {
     console.error(`${LOG_PREFIX} uncaught error`, event.message, event.filename, event.lineno);
@@ -36,20 +38,108 @@
     });
 
     if (isAccountPage()) {
-      mountAccountUI().catch(() => undefined);
+      scheduleAccountHydration();
       chrome.storage.onChanged.addListener((changes, areaName) => {
         if (areaName !== "local") {
           return;
         }
         if (changes[RollingVineStorage.STORAGE_KEYS.metrics] || changes[RollingVineStorage.STORAGE_KEYS.syncState]) {
-          hydrateAccountUI().catch(() => undefined);
+          scheduleAccountHydration();
         }
       });
+
+      window.addEventListener("pageshow", () => {
+        scheduleAccountHydration();
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && isAccountPage()) {
+          scheduleAccountHydration();
+        }
+      });
+
+      window.addEventListener("popstate", handlePotentialNavigation);
+      window.addEventListener("hashchange", handlePotentialNavigation);
+      patchHistoryForNavigationEvents();
+      window.addEventListener("rollingVine:navigation", handlePotentialNavigation);
     }
   }
 
+  function handlePotentialNavigation() {
+    if (location.href === lastKnownHref) {
+      if (isAccountPage()) {
+        scheduleAccountHydration();
+      }
+      return;
+    }
+
+    lastKnownHref = location.href;
+    if (isAccountPage()) {
+      scheduleAccountHydration();
+    } else {
+      rootEl = null;
+    }
+  }
+
+  function patchHistoryForNavigationEvents() {
+    const historyObj = window.history;
+    if (!historyObj || historyObj.__rollingVinePatched) {
+      return;
+    }
+
+    const rawPushState = historyObj.pushState;
+    const rawReplaceState = historyObj.replaceState;
+
+    historyObj.pushState = function patchedPushState(...args) {
+      const result = rawPushState.apply(this, args);
+      window.dispatchEvent(new Event("rollingVine:navigation"));
+      return result;
+    };
+
+    historyObj.replaceState = function patchedReplaceState(...args) {
+      const result = rawReplaceState.apply(this, args);
+      window.dispatchEvent(new Event("rollingVine:navigation"));
+      return result;
+    };
+
+    historyObj.__rollingVinePatched = true;
+  }
+
+  function scheduleAccountHydration() {
+    if (!isAccountPage()) {
+      return;
+    }
+
+    for (const delayMs of HYDRATE_RETRY_DELAYS_MS) {
+      setTimeout(() => {
+        if (isAccountPage()) {
+          mountAndHydrateAccountUI();
+        }
+      }, delayMs);
+    }
+  }
+
+  function mountAndHydrateAccountUI() {
+    mountAccountUI()
+      .then(() => hydrateAccountUI())
+      .catch(() => undefined);
+  }
+
+  function sendRuntimeMessage(message) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          reject(new Error(err.message));
+          return;
+        }
+        resolve(response);
+      });
+    });
+  }
+
   function isAccountPage() {
-    return location.pathname === ACCOUNT_PATH;
+    return ACCOUNT_PATH_REGEX.test(location.pathname);
   }
 
   function isOrdersPage() {
@@ -178,7 +268,17 @@
   }
 
   async function mountAccountUI() {
-    if (rootEl) {
+    if (rootEl && !rootEl.isConnected) {
+      rootEl = null;
+    }
+
+    if (rootEl && rootEl.isConnected) {
+      return;
+    }
+
+    const existingRoot = document.querySelector(".rolling-vine-root");
+    if (existingRoot) {
+      rootEl = existingRoot;
       return;
     }
 
@@ -189,27 +289,41 @@
 
     rootEl = document.createElement("section");
     rootEl.className = "rolling-vine-root";
-  rootEl.appendChild(buildAccountLayout());
+    rootEl.appendChild(buildAccountLayout());
     anchor.appendChild(rootEl);
 
     const syncBtn = rootEl.querySelector(".rolling-vine-sync-btn");
     syncBtn.addEventListener("click", async () => {
       syncBtn.disabled = true;
+      syncBtn.classList.add("is-syncing");
+      const syncStage = rootEl.querySelector("[data-sync-stage]");
+      if (syncStage) {
+        syncStage.textContent = "Starting sync...";
+      }
       try {
-        const response = await chrome.runtime.sendMessage({ type: "rollingVine.startSync" });
+        const response = await sendRuntimeMessage({
+          type: "rollingVine.startSync",
+          origin: location.origin,
+          pageUrl: location.href
+        });
         if (response && response.ok === false) {
           throw new Error(response.error || "Unknown sync start error");
+        }
+        if (response && response.state && response.state.isRunning && syncStage) {
+          syncStage.textContent = "Syncing orders...";
         }
       } catch (error) {
         const reason = error && error.message ? error.message : String(error);
         console.error(`${LOG_PREFIX} sync click failed`, error && error.stack ? error.stack : error);
+        syncBtn.classList.remove("is-syncing");
 
-        const syncStage = rootEl.querySelector("[data-sync-stage]");
         if (syncStage) {
           syncStage.textContent = `Sync failed to start: ${reason}`;
         }
       } finally {
-        await hydrateAccountUI();
+        setTimeout(() => {
+          hydrateAccountUI().catch(() => undefined);
+        }, 450);
       }
     });
 
@@ -220,7 +334,6 @@
       syncImg.src = chrome.runtime.getURL("/content/assets/sync.svg");
     }
 
-    await hydrateAccountUI();
   }
 
   function findAccountAnchor() {
@@ -377,6 +490,17 @@
   }
 
   async function hydrateAccountUI() {
+    if (rootEl && !rootEl.isConnected) {
+      rootEl = null;
+    }
+
+    if (!rootEl) {
+      const existingRoot = document.querySelector(".rolling-vine-root");
+      if (existingRoot) {
+        rootEl = existingRoot;
+      }
+    }
+
     if (!rootEl) {
       return;
     }
@@ -389,6 +513,11 @@
     const syncValue = rootEl.querySelector("[data-sync-value]");
     const syncStage = rootEl.querySelector("[data-sync-stage]");
     const syncBtn = rootEl.querySelector(".rolling-vine-sync-btn");
+
+    if (!syncValue || !syncStage || !syncBtn) {
+      rootEl = null;
+      return;
+    }
 
     syncValue.textContent = syncState.lastSuccessAt
       ? new Date(syncState.lastSuccessAt).toLocaleString()

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Rolling Vine",
   "description": "Shows Amazon Vine rolling periods review risk for 30/60/90 day windows with user-triggered sync.",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "minimum_chrome_version": "114",
   "icons": {
     "16": "assets/icon16.png",
