@@ -1,11 +1,24 @@
-importScripts("../shared/core.js", "../shared/storage.js");
+if (typeof importScripts === "function") {
+  importScripts("../shared/core.js", "../shared/storage.js");
+}
 
 const MAX_PAGES_PER_SECTION = 40;
 const PAGE_SETTLE_MIN_MS = 700;
 const PAGE_SETTLE_MAX_MS = 1400;
 const PAGE_LOAD_TIMEOUT_MS = 25000;
+const LOG_PREFIX = "[rolling-vine/bg]";
 
 let runningJob = null;
+
+console.log(`${LOG_PREFIX} service worker loaded`);
+
+self.addEventListener("error", (event) => {
+  console.error(`${LOG_PREFIX} uncaught error`, event.message, event.filename, event.lineno);
+});
+
+self.addEventListener("unhandledrejection", (event) => {
+  console.error(`${LOG_PREFIX} unhandled rejection`, event.reason);
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.type) {
@@ -13,15 +26,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "rollingVine.startSync") {
+    console.log(`${LOG_PREFIX} startSync requested`, sender && sender.tab ? sender.tab.url : "no-tab");
     handleStartSync(sender)
       .then((state) => sendResponse({ ok: true, state }))
-      .catch((error) => sendResponse({ ok: false, error: error.message }));
+      .catch((error) => {
+        console.error(`${LOG_PREFIX} startSync failed`, error && error.stack ? error.stack : error);
+        sendResponse({ ok: false, error: error.message });
+      });
     return true;
   }
 });
 
 async function handleStartSync(sender) {
   if (runningJob) {
+    console.log(`${LOG_PREFIX} sync already running`);
     return RollingVineStorage.getSyncState();
   }
 
@@ -43,6 +61,7 @@ async function handleStartSync(sender) {
 }
 
 async function runSync({ origin, accountTabId }) {
+  console.log(`${LOG_PREFIX} runSync started`, { origin, accountTabId });
   const startedAt = new Date().toISOString();
   const nowMs = Date.now();
 
@@ -109,6 +128,7 @@ async function runSync({ origin, accountTabId }) {
 
     notifyAccount(accountTabId, { type: "rollingVine.syncFinished" });
   } catch (error) {
+    console.error(`${LOG_PREFIX} runSync failed`, error && error.stack ? error.stack : error);
     await RollingVineStorage.setSyncState({
       status: "safe-stopped",
       isRunning: false,

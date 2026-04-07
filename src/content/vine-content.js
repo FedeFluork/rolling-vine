@@ -2,8 +2,17 @@
   const ACCOUNT_PATH = "/vine/account";
   const ORDERS_PATH = "/vine/orders";
   const REVIEWS_PATH = "/vine/vine-reviews";
+  const LOG_PREFIX = "[rolling-vine/content]";
 
   let rootEl = null;
+
+  window.addEventListener("error", (event) => {
+    console.error(`${LOG_PREFIX} uncaught error`, event.message, event.filename, event.lineno);
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    console.error(`${LOG_PREFIX} unhandled rejection`, event.reason);
+  });
 
   init();
 
@@ -186,8 +195,22 @@
     const syncBtn = rootEl.querySelector(".rolling-vine-sync-btn");
     syncBtn.addEventListener("click", async () => {
       syncBtn.disabled = true;
-      await chrome.runtime.sendMessage({ type: "rollingVine.startSync" });
-      await hydrateAccountUI();
+      try {
+        const response = await chrome.runtime.sendMessage({ type: "rollingVine.startSync" });
+        if (response && response.ok === false) {
+          throw new Error(response.error || "Unknown sync start error");
+        }
+      } catch (error) {
+        const reason = error && error.message ? error.message : String(error);
+        console.error(`${LOG_PREFIX} sync click failed`, error && error.stack ? error.stack : error);
+
+        const syncStage = rootEl.querySelector("[data-sync-stage]");
+        if (syncStage) {
+          syncStage.textContent = `Sync failed to start: ${reason}`;
+        }
+      } finally {
+        await hydrateAccountUI();
+      }
     });
 
     wireDonationLinks();

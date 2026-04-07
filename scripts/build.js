@@ -46,7 +46,11 @@ function buildTarget(target) {
 
     manifest.background = manifest.background || {};
     delete manifest.background.service_worker;
-    manifest.background.scripts = ["background/service-worker.js"];
+    manifest.background.scripts = [
+      "shared/core.js",
+      "shared/storage.js",
+      "background/service-worker.js"
+    ];
   }
 
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
