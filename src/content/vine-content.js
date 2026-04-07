@@ -318,46 +318,54 @@
     rootEl.appendChild(buildAccountLayout());
     anchor.appendChild(rootEl);
 
-    const syncBtn = rootEl.querySelector(".rolling-vine-sync-btn");
-    syncBtn.addEventListener("click", async () => {
-      syncBtn.disabled = true;
-      syncBtn.classList.add("is-syncing");
-      const syncStage = rootEl.querySelector("[data-sync-stage]");
-      if (syncStage) {
-        syncStage.textContent = "Starting sync...";
-      }
-      try {
-        const response = await sendRuntimeMessage({
-          type: "rollingVine.startSync",
-          origin: location.origin,
-          pageUrl: location.href
-        });
-        if (response && response.ok === false) {
-          throw new Error(response.error || "Unknown sync start error");
-        }
-        if (response && response.state && response.state.isRunning && syncStage) {
-          syncStage.textContent = "Syncing orders...";
-        }
-      } catch (error) {
-        const reason = error && error.message ? error.message : String(error);
-        console.error(`${LOG_PREFIX} sync click failed`, error && error.stack ? error.stack : error);
-        syncBtn.classList.remove("is-syncing");
-
-        if (syncStage) {
-          syncStage.textContent = `Sync failed to start: ${reason}`;
-        }
-      } finally {
-        setTimeout(() => {
-          hydrateAccountUI().catch(() => undefined);
-        }, 450);
-      }
-    });
-
     wireDonationLinks();
 
-    const syncImg = syncBtn.querySelector(".rolling-vine-sync-icon");
+    const syncImg = rootEl.querySelector(".rolling-vine-sync-icon");
     if (syncImg) {
       syncImg.src = chrome.runtime.getURL("/content/assets/sync.svg");
+    }
+
+    if (!rootEl.__syncBtnDelegated) {
+      rootEl.addEventListener("click", async (event) => {
+        const syncBtn = event.target.closest(".rolling-vine-sync-btn");
+        if (!syncBtn) {
+          return;
+        }
+
+        syncBtn.disabled = true;
+        syncBtn.classList.add("is-syncing");
+        const syncStage = rootEl.querySelector("[data-sync-stage]");
+        if (syncStage) {
+          syncStage.textContent = "Starting sync...";
+        }
+        try {
+          const response = await sendRuntimeMessage({
+            type: "rollingVine.startSync",
+            origin: location.origin,
+            pageUrl: location.href
+          });
+          if (response && response.ok === false) {
+            throw new Error(response.error || "Unknown sync start error");
+          }
+          if (response && response.state && response.state.isRunning && syncStage) {
+            syncStage.textContent = "Syncing orders...";
+          }
+        } catch (error) {
+          const reason = error && error.message ? error.message : String(error);
+          console.error(`${LOG_PREFIX} sync click failed`, error && error.stack ? error.stack : error);
+          syncBtn.classList.remove("is-syncing");
+
+          if (syncStage) {
+            syncStage.textContent = `Sync failed to start: ${reason}`;
+          }
+        } finally {
+          setTimeout(() => {
+            hydrateAccountUI().catch(() => undefined);
+          }, 450);
+        }
+      });
+
+      rootEl.__syncBtnDelegated = true;
     }
 
   }
@@ -453,9 +461,13 @@
     paypalImg.alt = "PayPal";
     paypalLink.appendChild(paypalImg);
 
+    const donationButtons = document.createElement("div");
+    donationButtons.className = "rolling-vine-donation-buttons";
+    donationButtons.appendChild(kofiLink);
+    donationButtons.appendChild(paypalLink);
+
     donation.appendChild(donationLabel);
-    donation.appendChild(kofiLink);
-    donation.appendChild(paypalLink);
+    donation.appendChild(donationButtons);
 
     fragment.appendChild(headerRow);
     fragment.appendChild(lastSync);
