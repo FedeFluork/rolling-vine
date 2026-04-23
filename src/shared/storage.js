@@ -1,7 +1,8 @@
 (function () {
   const STORAGE_KEYS = {
     syncState: "rollingVine.syncState",
-    metrics: "rollingVine.metrics"
+    metrics: "rollingVine.metrics",
+    syncCache: "rollingVine.syncCache"
   };
 
   const hasBrowserStorage =
@@ -92,12 +93,26 @@
     return metrics;
   }
 
+  async function getSyncCache() {
+    const data = await getStorage([STORAGE_KEYS.syncCache]);
+    return data[STORAGE_KEYS.syncCache] || {};
+  }
+
+  async function setSyncCache(nextCache) {
+    const current = await getSyncCache();
+    const merged = { ...current, ...nextCache };
+    await setStorage({ [STORAGE_KEYS.syncCache]: merged });
+    return merged;
+  }
+
   const api = {
     STORAGE_KEYS,
     getSyncState,
     setSyncState,
     getMetrics,
-    setMetrics
+    setMetrics,
+    getSyncCache,
+    setSyncCache
   };
 
   globalThis.RollingVineStorage = api;

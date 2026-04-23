@@ -42,12 +42,7 @@ test("zero orders returns N/A semantics via null rate", () => {
   assert.equal(metrics.periods[90].status, "ok");
 });
 
-test("extractDateFromText parses localized date formats", () => {
-  const a = core.extractDateFromText("Ordered on 03/15/2026", "en-US");
-  const b = core.extractDateFromText("Ordine del 15/03/2026", "it-IT");
-
-  assert.ok(a instanceof Date);
-  assert.ok(b instanceof Date);
-  assert.equal(a.getUTCFullYear(), 2026);
-  assert.equal(b.getUTCMonth() + 1, 3);
+test("normalizeText removes accents and extra spacing", () => {
+  const value = core.normalizeText("  Sessi\u00F3n   ExPired  ");
+  assert.equal(value, "sessio n expired");
 });

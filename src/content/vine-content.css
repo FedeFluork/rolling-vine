@@ -87,6 +87,18 @@
   background: #ffffff;
 }
 
+.rolling-vine-card.is-risk[data-period="90"] {
+  background: #ffe1e1;
+}
+
+.rolling-vine-card.is-risk[data-period="60"] {
+  background: #ffefef;
+}
+
+.rolling-vine-card.is-risk[data-period="30"] {
+  background: #fff7f7;
+}
+
 .rolling-vine-card h4 {
   margin: 0 0 8px;
   font-size: 14px;
@@ -101,10 +113,49 @@
   font-size: 13px;
 }
 
+.rolling-vine-risk-row {
+  justify-content: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #d5d9d9;
+  text-align: center;
+}
+
+.rolling-vine-risk-row strong {
+  width: 100%;
+  color: #565959;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.rolling-vine-card.is-risk .rolling-vine-risk-row {
+  border-top-color: rgba(196, 0, 0, 0.2);
+}
+
+.rolling-vine-card.is-risk .rolling-vine-risk-row strong {
+  color: #7a0012;
+}
+
+.rolling-vine-status-info-row {
+  justify-content: center;
+  margin-top: 6px;
+  color: #565959;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.rolling-vine-status-info-row strong {
+  width: 100%;
+  color: #3f4444;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .rolling-vine-card.is-risk {
-  border-color: #c40000;
-  background: #fff5f5;
-  box-shadow: inset 0 0 0 1px rgba(196, 0, 0, 0.12);
+  border-color: #b00020;
+  box-shadow: inset 0 0 0 1px rgba(176, 0, 32, 0.2);
 }
 
 .rolling-vine-donation {

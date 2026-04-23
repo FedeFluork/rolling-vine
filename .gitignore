@@ -2,3 +2,6 @@ node_modules/
 dist/
 web-ext-artifacts/
 .DS_Store
+
+ROADMAP.md
+CHANGELOG.md

@@ -38,9 +38,18 @@ function buildTarget(target) {
 
   if (target === "firefox") {
     manifest.browser_specific_settings = manifest.browser_specific_settings || {
-      gecko: {
-        id: "rolling-vine@fedefluork.dev",
-        strict_min_version: "121.0"
+      "gecko": {
+        "id": "rolling-vine@fedefluork.dev",
+        "strict_min_version": "140.0",
+        "data_collection_permissions": {
+          "required": [
+            "none"
+          ],
+          "optional": []
+        }
+      },
+      "gecko_android": {
+        "strict_min_version": "142.0"
       }
     };
 

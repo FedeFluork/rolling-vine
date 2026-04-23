@@ -8,6 +8,12 @@ It adds rolling periods statistics to the Vine Account page and highlights risk 
 [![Donate Ko-fi](https://img.shields.io/badge/Donate-Ko--fi-orange)](https://ko-fi.com/fedefluork)
 [![Donate Paypal](https://img.shields.io/badge/Donate-PayPal-blue)](https://paypal.me/FedeFluork)
 
+## Installation
+
+- **Chrome: https://chromewebstore.google.com/detail/rolling-vine/hgiimajedoelhkpgfknfhipedhlaoebj**
+- **Firefox: https://addons.mozilla.org/en-US/firefox/addon/rolling-vine/**
+- **Edge: https://microsoftedge.microsoft.com/addons/detail/rolling-vine/gocnagihbolpjmbmfnepafelllpfdeok**
+
 ## What It Does
 
 On the Vine Account page (`/vine/account`), the extension injects:

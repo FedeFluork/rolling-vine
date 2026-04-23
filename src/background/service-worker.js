@@ -9,6 +9,12 @@ const PAGE_LOAD_TIMEOUT_MS = 25000;
 const EXTRACT_ATTEMPTS = 5;
 const EXTRACT_RETRY_DELAY_MS = 900;
 const LOG_PREFIX = "[rolling-vine/bg]";
+const SAFE_STOP_ERROR_CODES = {
+  captcha: "captcha",
+  sessionExpired: "session-expired",
+  timeout: "timeout",
+  unknown: "unknown"
+};
 
 let runningJob = null;
 
@@ -80,6 +86,16 @@ async function runSync({ origin, accountTabId }) {
   console.log(`${LOG_PREFIX} runSync started`, { origin, accountTabId });
   const startedAt = new Date().toISOString();
   const nowMs = Date.now();
+  const ordersCutoffMs = nowMs - 90 * 24 * 60 * 60 * 1000;
+  const syncCache = await RollingVineStorage.getSyncCache();
+  const lastOrdersTopTimestamp = Number(syncCache && syncCache.lastOrdersTopTimestamp) || null;
+  const cachedOrdersScannedCount = Number(syncCache && syncCache.lastOrdersScannedCount) || 0;
+  const cachedOrdersDateMsList = normalizeTimestampList(syncCache && syncCache.lastOrdersDateMsList)
+    .filter((timestamp) => timestamp >= ordersCutoffMs);
+  const hasOrdersBaseline =
+    lastOrdersTopTimestamp &&
+    cachedOrdersScannedCount > 0 &&
+    cachedOrdersDateMsList.length > 0;
 
   await RollingVineStorage.setSyncState({
     status: "running",
@@ -87,6 +103,7 @@ async function runSync({ origin, accountTabId }) {
     stage: "orders",
     startedAt,
     lastError: null,
+    lastErrorCode: null,
     progress: { section: "orders", page: 1 }
   });
 
@@ -101,8 +118,36 @@ async function runSync({ origin, accountTabId }) {
       origin,
       section: "orders",
       accountTabId,
-      nowMs
+      nowMs,
+      ordersCheckpointTimestamp: hasOrdersBaseline ? lastOrdersTopTimestamp : null
     });
+
+    let ordersDateMsForMetrics = normalizeTimestampList(ordersResult.dateMsList)
+      .filter((timestamp) => timestamp >= ordersCutoffMs);
+
+    if (ordersResult.stopReason === "matched-last-orders-timestamp" && hasOrdersBaseline) {
+      const ordersDeltaDateMsList = ordersDateMsForMetrics
+        .filter((timestamp) => timestamp > lastOrdersTopTimestamp);
+      ordersDateMsForMetrics = mergeUniqueTimestamps(cachedOrdersDateMsList, ordersDeltaDateMsList)
+        .filter((timestamp) => timestamp >= ordersCutoffMs);
+    }
+
+    const ordersTopTimestamp = ordersDateMsForMetrics.length > 0
+      ? Math.max(...ordersDateMsForMetrics)
+      : null;
+
+    await RollingVineStorage.setSyncCache({
+      lastOrdersTopTimestamp: ordersTopTimestamp,
+      lastOrdersScannedCount: ordersDateMsForMetrics.length,
+      lastOrdersDateMsList: ordersDateMsForMetrics,
+      ordersCheckpointUpdatedAt: new Date().toISOString()
+    });
+
+    if (ordersResult.stopReason === "matched-last-orders-timestamp") {
+      ordersResult.reusedOrdersBaselineCount = cachedOrdersScannedCount;
+      ordersResult.ordersDeltaCount = ordersDateMsForMetrics
+        .filter((timestamp) => !cachedOrdersDateMsList.includes(timestamp)).length;
+    }
 
     await RollingVineStorage.setSyncState({
       status: "running",
@@ -119,7 +164,7 @@ async function runSync({ origin, accountTabId }) {
     });
 
     const metrics = RollingVineCore.buildMetrics(
-      ordersResult.dateMsList,
+      ordersDateMsForMetrics,
       reviewsResult.dateMsList,
       nowMs
     );
@@ -130,7 +175,8 @@ async function runSync({ origin, accountTabId }) {
       ordersPages: ordersResult.pagesScanned,
       reviewsPages: reviewsResult.pagesScanned,
       ordersStopReason: ordersResult.stopReason,
-      reviewsStopReason: reviewsResult.stopReason
+      reviewsStopReason: reviewsResult.stopReason,
+      ordersCountUsedForMetrics: ordersDateMsForMetrics.length
     };
 
     await RollingVineStorage.setMetrics(metrics);
@@ -140,21 +186,28 @@ async function runSync({ origin, accountTabId }) {
       stage: null,
       progress: null,
       lastSuccessAt: metrics.generatedAt,
-      lastError: null
+      lastError: null,
+      lastErrorCode: null
     });
 
     notifyAccount(accountTabId, { type: "rollingVine.syncFinished" });
   } catch (error) {
     console.error(`${LOG_PREFIX} runSync failed`, error && error.stack ? error.stack : error);
+    const safeStopError = classifySafeStopError(error);
     await RollingVineStorage.setSyncState({
       status: "safe-stopped",
       isRunning: false,
       stage: null,
       progress: null,
-      lastError: error.message
+      lastError: safeStopError.message,
+      lastErrorCode: safeStopError.code
     });
 
-    notifyAccount(accountTabId, { type: "rollingVine.syncFailed", error: error.message });
+    notifyAccount(accountTabId, {
+      type: "rollingVine.syncFailed",
+      error: safeStopError.message,
+      errorCode: safeStopError.code
+    });
   } finally {
     if (tempTabId !== null) {
       await closeTabSafe(tempTabId);
@@ -162,8 +215,38 @@ async function runSync({ origin, accountTabId }) {
   }
 }
 
-async function scanSection({ tabId, origin, section, accountTabId, nowMs }) {
+function classifySafeStopError(error) {
+  const fallbackMessage = "Sync stopped safely due to an unexpected issue";
+  const message =
+    error && typeof error.message === "string" && error.message.trim()
+      ? error.message.trim()
+      : fallbackMessage;
+  const normalized = RollingVineCore.normalizeText(message);
+
+  if (normalized.includes("captcha")) {
+    return { code: SAFE_STOP_ERROR_CODES.captcha, message };
+  }
+
+  if (
+    normalized.includes("login required") ||
+    normalized.includes("session expired") ||
+    normalized.includes("sign in") ||
+    normalized.includes("signin")
+  ) {
+    return { code: SAFE_STOP_ERROR_CODES.sessionExpired, message };
+  }
+
+  if (normalized.includes("timeout") || normalized.includes("timed out")) {
+    return { code: SAFE_STOP_ERROR_CODES.timeout, message };
+  }
+
+  return { code: SAFE_STOP_ERROR_CODES.unknown, message };
+}
+
+async function scanSection({ tabId, origin, section, accountTabId, nowMs, ordersCheckpointTimestamp = null }) {
   const dateMsSet = new Set();
+  const normalizedOrdersCheckpointTimestamp =
+    section === "orders" ? Number(ordersCheckpointTimestamp) || null : null;
   let page = 1;
   let stopReason = "max-pages";
 
@@ -196,6 +279,15 @@ async function scanSection({ tabId, origin, section, accountTabId, nowMs }) {
       }
     }
 
+    if (
+      section === "orders" &&
+      normalizedOrdersCheckpointTimestamp &&
+      response.items.some((item) => item && item.dateMs === normalizedOrdersCheckpointTimestamp)
+    ) {
+      stopReason = "matched-last-orders-timestamp";
+      break;
+    }
+
     if (response.reachedOlderThan90) {
       stopReason = "older-than-90-days";
       break;
@@ -216,6 +308,7 @@ async function scanSection({ tabId, origin, section, accountTabId, nowMs }) {
 
   return {
     dateMsList: Array.from(dateMsSet),
+    topTimestamp: dateMsSet.size > 0 ? Math.max(...dateMsSet) : null,
     pagesScanned: page,
     stopReason
   };
@@ -364,4 +457,25 @@ function restoreAccountTabFocus(tabId) {
       resolve();
     });
   });
+}
+
+function normalizeTimestampList(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => Number(item))
+    .filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0);
+}
+
+function mergeUniqueTimestamps(baseList, deltaList) {
+  const mergedSet = new Set();
+  for (const timestamp of normalizeTimestampList(baseList)) {
+    mergedSet.add(timestamp);
+  }
+  for (const timestamp of normalizeTimestampList(deltaList)) {
+    mergedSet.add(timestamp);
+  }
+  return Array.from(mergedSet);
 }

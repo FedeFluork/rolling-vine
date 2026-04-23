@@ -6,9 +6,16 @@
   const HYDRATE_RETRY_DELAYS_MS = [0, 250, 800, 1600];
   const START_SYNC_ATTEMPTS = 3;
   const START_SYNC_RETRY_DELAY_MS = 500;
+  const SAFE_STOP_ERROR_CODES = {
+    captcha: "captcha",
+    sessionExpired: "session-expired",
+    timeout: "timeout",
+    unknown: "unknown"
+  };
 
   let rootEl = null;
   let lastKnownHref = location.href;
+  const ui = RollingVineI18n.resolveUiStrings(location.hostname);
 
   window.addEventListener("error", (event) => {
     console.error(`${LOG_PREFIX} uncaught error`, event.message, event.filename, event.lineno);
@@ -176,6 +183,49 @@
     return location.pathname === REVIEWS_PATH && /review-type=completed/.test(location.search);
   }
 
+  function inferSafeStopErrorCode(lastError) {
+    const normalized = RollingVineCore.normalizeText(lastError || "");
+
+    if (normalized.includes("captcha")) {
+      return SAFE_STOP_ERROR_CODES.captcha;
+    }
+    if (
+      normalized.includes("login required") ||
+      normalized.includes("session expired") ||
+      normalized.includes("sign in") ||
+      normalized.includes("signin")
+    ) {
+      return SAFE_STOP_ERROR_CODES.sessionExpired;
+    }
+    if (normalized.includes("timeout") || normalized.includes("timed out")) {
+      return SAFE_STOP_ERROR_CODES.timeout;
+    }
+
+    return SAFE_STOP_ERROR_CODES.unknown;
+  }
+
+  function getSafeStopMessage(syncState) {
+    const code = syncState.lastErrorCode || inferSafeStopErrorCode(syncState.lastError);
+
+    if (code === SAFE_STOP_ERROR_CODES.captcha) {
+      return ui.safeStoppedCaptcha;
+    }
+
+    if (code === SAFE_STOP_ERROR_CODES.sessionExpired) {
+      return ui.safeStoppedSession;
+    }
+
+    if (code === SAFE_STOP_ERROR_CODES.timeout) {
+      return ui.safeStoppedTimeout;
+    }
+
+    if (syncState.lastError) {
+      return ui.safeStoppedWithError(syncState.lastError);
+    }
+
+    return ui.safeStoppedDefault;
+  }
+
   function detectSafetyStop() {
     const text = document.body ? document.body.textContent || "" : "";
     const normalized = RollingVineCore.normalizeText(text);
@@ -336,7 +386,7 @@
         syncBtn.classList.add("is-syncing");
         const syncStage = rootEl.querySelector("[data-sync-stage]");
         if (syncStage) {
-          syncStage.textContent = "Starting sync...";
+          syncStage.textContent = ui.startingSync;
         }
         try {
           const response = await sendRuntimeMessage({
@@ -348,7 +398,7 @@
             throw new Error(response.error || "Unknown sync start error");
           }
           if (response && response.state && response.state.isRunning && syncStage) {
-            syncStage.textContent = "Syncing orders...";
+            syncStage.textContent = ui.syncingOrders;
           }
         } catch (error) {
           const reason = error && error.message ? error.message : String(error);
@@ -356,7 +406,7 @@
           syncBtn.classList.remove("is-syncing");
 
           if (syncStage) {
-            syncStage.textContent = `Sync failed to start: ${reason}`;
+            syncStage.textContent = `${ui.syncStartFailedPrefix}: ${reason}`;
           }
         } finally {
           setTimeout(() => {
@@ -410,20 +460,20 @@
 
     const syncIcon = document.createElement("img");
     syncIcon.className = "rolling-vine-sync-icon";
-    syncIcon.alt = "Sync icon";
+    syncIcon.alt = ui.syncIconAlt;
 
     syncBtn.appendChild(syncIcon);
-    syncBtn.appendChild(document.createTextNode("Sync my Vine history"));
+    syncBtn.appendChild(document.createTextNode(ui.syncButton));
     headerRow.appendChild(title);
     headerRow.appendChild(syncBtn);
 
     const lastSync = document.createElement("div");
     lastSync.className = "rolling-vine-last-sync";
-    lastSync.appendChild(document.createTextNode("Last sync: "));
+    lastSync.appendChild(document.createTextNode(`${ui.lastSyncLabel} `));
 
     const syncValue = document.createElement("span");
     syncValue.setAttribute("data-sync-value", "");
-    syncValue.textContent = "Never";
+    syncValue.textContent = ui.never;
     lastSync.appendChild(syncValue);
 
     const stage = document.createElement("div");
@@ -441,13 +491,13 @@
 
     const donationLabel = document.createElement("span");
     donationLabel.className = "rolling-vine-donation-label";
-    donationLabel.textContent = "Support this extension:";
+    donationLabel.textContent = ui.supportExtension;
 
     const kofiLink = document.createElement("a");
     kofiLink.href = "#";
     kofiLink.className = "rolling-vine-donate-btn rolling-vine-donate-kofi";
     kofiLink.setAttribute("data-donation", "kofi");
-    kofiLink.setAttribute("aria-label", "Donate with Ko-fi");
+    kofiLink.setAttribute("aria-label", ui.donateWithKofi);
     const kofiImg = document.createElement("img");
     kofiImg.alt = "Ko-fi";
     kofiLink.appendChild(kofiImg);
@@ -456,7 +506,7 @@
     paypalLink.href = "#";
     paypalLink.className = "rolling-vine-donate-btn rolling-vine-donate-paypal";
     paypalLink.setAttribute("data-donation", "paypal");
-    paypalLink.setAttribute("aria-label", "Donate with PayPal");
+    paypalLink.setAttribute("aria-label", ui.donateWithPaypal);
     const paypalImg = document.createElement("img");
     paypalImg.alt = "PayPal";
     paypalLink.appendChild(paypalImg);
@@ -484,15 +534,28 @@
     card.setAttribute("data-period", String(period));
 
     const title = document.createElement("h4");
-    title.textContent = `Last ${period} days`;
+    title.textContent = ui.periodTitle(period);
     card.appendChild(title);
 
-    card.appendChild(buildCardRow("Orders", "orders", "0"));
-    card.appendChild(buildCardRow("Reviews", "reviews", "0"));
-    card.appendChild(buildCardRow("Review rate", "rate", "N/A"));
-    card.appendChild(buildCardRow("Status", "status", "OK"));
+    card.appendChild(buildCardRow(ui.labels.orders, "orders", "0"));
+    card.appendChild(buildCardRow(ui.labels.reviews, "reviews", "0"));
+    card.appendChild(buildCardRow(ui.labels.rate, "rate", ui.rateNA));
+    card.appendChild(buildRiskRow(period));
+    card.appendChild(buildStatusInfoRow());
 
     return card;
+  }
+
+  function buildRiskRow(period) {
+    const row = document.createElement("div");
+    row.className = "rolling-vine-row rolling-vine-risk-row";
+
+    const risk = document.createElement("strong");
+    risk.setAttribute("data-field", "riskLevel");
+    risk.textContent = getRiskLabel(period, "ok");
+
+    row.appendChild(risk);
+    return row;
   }
 
   function buildCardRow(labelText, fieldName, valueText) {
@@ -509,6 +572,18 @@
     row.appendChild(label);
     row.appendChild(value);
 
+    return row;
+  }
+
+  function buildStatusInfoRow() {
+    const row = document.createElement("div");
+    row.className = "rolling-vine-row rolling-vine-status-info-row";
+
+    const value = document.createElement("strong");
+    value.setAttribute("data-field", "statusInfo");
+    value.textContent = "";
+
+    row.appendChild(value);
     return row;
   }
 
@@ -559,14 +634,14 @@
 
     syncValue.textContent = syncState.lastSuccessAt
       ? new Date(syncState.lastSuccessAt).toLocaleString()
-      : "Never";
+      : ui.never;
 
     if (syncState.isRunning) {
-      syncStage.textContent = syncState.stage === "orders" ? "Syncing orders..." : "Syncing completed reviews...";
+      syncStage.textContent = syncState.stage === "orders" ? ui.syncingOrders : ui.syncingReviews;
       syncBtn.disabled = true;
       syncBtn.classList.add("is-syncing");
-    } else if (syncState.status === "safe-stopped" && syncState.lastError) {
-      syncStage.textContent = `Sync stopped safely: ${syncState.lastError}`;
+    } else if (syncState.status === "safe-stopped") {
+      syncStage.textContent = getSafeStopMessage(syncState);
       syncBtn.disabled = false;
       syncBtn.classList.remove("is-syncing");
     } else {
@@ -592,12 +667,48 @@
       card.querySelector('[data-field="orders"]').textContent = String(periodMetrics.orders || 0);
       card.querySelector('[data-field="reviews"]').textContent = String(periodMetrics.reviews || 0);
       card.querySelector('[data-field="rate"]').textContent =
-        periodMetrics.rate === null ? "N/A" : `${periodMetrics.rate.toFixed(1)}%`;
-      card.querySelector('[data-field="status"]').textContent =
-        periodMetrics.status === "at-risk" ? "At risk" : "OK";
+        periodMetrics.rate === null ? ui.rateNA : `${periodMetrics.rate.toFixed(1)}%`;
+
+      const riskLevelField = card.querySelector('[data-field="riskLevel"]');
+      if (riskLevelField) {
+        riskLevelField.textContent = getRiskLabel(period, periodMetrics.status);
+      }
+
+      const statusInfoField = card.querySelector('[data-field="statusInfo"]');
+      if (statusInfoField) {
+        statusInfoField.textContent = computeStatusInfo(periodMetrics);
+      }
 
       card.classList.toggle("is-risk", periodMetrics.status === "at-risk");
     }
+  }
+
+  function computeStatusInfo(periodMetrics) {
+    const { status, reviews, orders } = periodMetrics;
+
+    if (status === "ok") {
+      if (orders === 0) {
+        return "";
+      }
+      const maxOrders = Math.floor(reviews / 0.6);
+      const ordersAllowed = Math.max(0, maxOrders - orders);
+      return ui.moreOrdersAllowed(ordersAllowed);
+    }
+
+    if (status === "at-risk") {
+      const reviewsNeeded = Math.max(0, Math.ceil(orders * 0.6) - reviews);
+      return ui.moreReviewsNeeded(reviewsNeeded);
+    }
+
+    return "";
+  }
+
+  function getRiskLabel(period, status) {
+    if (status === "at-risk") {
+      return ui.riskByPeriod[period] || ui.riskByPeriod[90];
+    }
+
+    return ui.neutralRiskLabel;
   }
 
   function delay(ms) {
