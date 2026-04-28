@@ -260,7 +260,6 @@ async function scanSection({ tabId, origin, section, accountTabId, nowMs, orders
     await navigateTab(tabId, url);
     await waitForTabComplete(tabId, PAGE_LOAD_TIMEOUT_MS);
     await randomDelay(PAGE_SETTLE_MIN_MS, PAGE_SETTLE_MAX_MS);
-    await restoreAccountTabFocus(accountTabId);
 
     const response = await extractFromTabWithRetries(tabId, section, nowMs);
 

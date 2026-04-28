@@ -6,7 +6,10 @@
     "www.amazon.de": "de",
     "www.amazon.fr": "fr",
     "www.amazon.co.uk": "en",
-    "www.amazon.com": "en"
+    "www.amazon.com": "en",
+    "www.amazon.ca": "en",
+    "www.amazon.com.au": "en",
+    "www.amazon.co.jp": "ja"
   };
 
   const UI_STRINGS = {
@@ -174,6 +177,39 @@
       safeStoppedDefault: "Synchronisation interrompue de facon securisee. Reessayez dans quelques instants.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 commande supplementaire autorisee" : `${count} commandes supplementaires autorisees`),
       moreReviewsNeeded: (count) => (count === 1 ? "1 avis supplementaire necessaire" : `${count} avis supplementaires necessaires`)
+    },
+    ja: {
+      syncButton: "Vine履歴を同期",
+      syncIconAlt: "同期アイコン",
+      lastSyncLabel: "最終同期:",
+      never: "未実行",
+      startingSync: "同期を開始しています...",
+      syncingOrders: "注文を同期しています...",
+      syncingReviews: "完了したレビューを同期しています...",
+      supportExtension: "この拡張機能を支援する:",
+      donateWithKofi: "Ko-fiで寄付する",
+      donateWithPaypal: "PayPalで寄付する",
+      syncStartFailedPrefix: "同期の開始に失敗しました",
+      labels: {
+        orders: "注文",
+        reviews: "レビュー",
+        rate: "レビュー率"
+      },
+      riskByPeriod: {
+        90: "Vine Jailの高リスク",
+        60: "中程度のリスク",
+        30: "低リスク"
+      },
+      neutralRiskLabel: "安全圏内の割合",
+      periodTitle: (days) => `過去${days}日間`,
+      rateNA: "N/A",
+      safeStoppedCaptcha: "同期が中断されました: AmazonがCAPTCHAを要求しました。Vineページを開き、CAPTCHAを完了してから再試行してください。",
+      safeStoppedSession: "同期が中断されました: Amazonセッションが期限切れのようです。再度サインインし、Vineアカウントページに戻ってから再試行してください。",
+      safeStoppedTimeout: "同期が中断されました: ページの読み込みに時間がかかりすぎました。接続を確認し、タブを開いたまま再試行してください。",
+      safeStoppedWithError: (errorText) => `同期が安全に中断されました: ${errorText}`,
+      safeStoppedDefault: "同期が安全に中断されました。しばらくしてから再試行してください。",
+      moreOrdersAllowed: (count) => `あと${count}件の注文が可能`,
+      moreReviewsNeeded: (count) => `あと${count}件のレビューが必要`
     }
   };
 

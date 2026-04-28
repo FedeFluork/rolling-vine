@@ -2,7 +2,7 @@
 	<img src="images/logo_full.png" alt="Rolling Vine logo" />
 </p>
 
-Rolling Vine is a cross-browser WebExtension (Chrome + Firefox) for Amazon Vine users.
+Rolling Vine is a cross-browser WebExtension (Chrome, Firefox, Edge) for Amazon Vine users.
 It adds rolling periods statistics to the Vine Account page and highlights risk windows where review completion rate is below 60%.
 
 [![Donate Ko-fi](https://img.shields.io/badge/Donate-Ko--fi-orange)](https://ko-fi.com/fedefluork)
@@ -23,11 +23,13 @@ On the Vine Account page (`/vine/account`), the extension injects:
 	- Orders
 	- Reviews
 	- Review rate
-	- Status (`At risk` when rate is below 60%, otherwise `OK`)
+	- Risk level label with severity by period (high risk at 90 days, moderate at 60, low at 30)
+	- Actionable info: how many more orders are allowed or reviews are needed
 - Sync controls:
-	- `Sync my Vine history` button
+	- `Sync Vine history` button
 	- `Last sync: <timestamp>` label
 - A compact donation row with links to Ko-fi and PayPal
+- All UI labels are automatically localized based on the Amazon domain (English, Italian, Spanish, German, French, Japanese)
 
 <p align="center">
 	<img src="images/screenshot.png" alt="Rolling Vine screenshot" />
@@ -37,7 +39,7 @@ On the Vine Account page (`/vine/account`), the extension injects:
 
 Sync is user-triggered from your Vine Account page at `/vine/account`.
 
-1. User clicks `Sync my Vine history`.
+1. User clicks `Sync Vine history`.
 2. Service worker opens a non-active background tab.
 3. Worker scans pages in this strict order:
 	 - Orders:
@@ -51,8 +53,10 @@ Sync is user-triggered from your Vine Account page at `/vine/account`.
 		 - `/vine/vine-reviews?page=3&review-type=completed`
 		 - ...
 4. It counts only items in the last 90 days from sync start.
-5. It stops section scan when the parser detects older-than-90-day items.
-6. It stores 90/60/30-day aggregates locally and updates Account cards.
+5. It stops section scan when the parser detects older-than-90-day items or matches a cached checkpoint from the previous sync.
+6. It stores 90/60/30-day aggregates locally, caches order timestamps for incremental sync, and updates Account cards.
+
+Sync uses a checkpoint cache: on subsequent runs it can skip already-scanned order pages, making repeat syncs faster.
 
 ## Safety and Failure Policy
 
@@ -63,7 +67,7 @@ The sync pipeline stops safely and immediately if it detects:
 - Empty or unexpected markup (no parsable records)
 - Navigation timeout
 
-When safe-stop happens, previous valid metrics remain visible and the sync status reports the reason.
+When safe-stop happens, previous valid metrics remain visible and the UI shows a user-friendly, localized message describing the specific reason (e.g. CAPTCHA requested, session expired, page timeout).
 
 The worker uses small bounded random delays between page transitions for load pacing and stability.
 
@@ -72,20 +76,26 @@ The worker uses small bounded random delays between page transitions for load pa
 For each period (`90`, `60`, `30`):
 
 - `review_rate = (reviews / orders) * 100`
-- If `review_rate < 60`, status is `At risk`
-- If `review_rate >= 60`, status is `OK`
-- If `orders == 0`, review rate is shown as `N/A`, status remains neutral (`OK`)
+- If `review_rate < 60`, status is `At risk` with a period-specific severity label:
+	- 90 days: high risk of Vine Jail
+	- 60 days: moderate risk
+	- 30 days: low risk
+- If `review_rate >= 60`, status is safe (neutral label)
+- If `orders == 0`, review rate is shown as `N/A`, status remains neutral
+
+When at risk, each card also displays how many more reviews are needed to reach the 60% threshold. When safe, it shows how many more orders can be placed before hitting the limit.
 
 ## Browser Compatibility Choices
 
 - Single codebase with Manifest V3
-- Firefox compatibility via `browser_specific_settings.gecko` in manifest
-- Cross-browser compatible `chrome.*` extension APIs and Promise wrappers in shared storage helpers
+- Firefox compatibility via `browser_specific_settings.gecko` and `gecko_android` in manifest
+- Firefox Android support (`strict_min_version: 142.0`)
+- Cross-browser compatible `chrome.*` and `browser.*` extension APIs with dual-path storage helpers
 - Browser-specific behavior is isolated in build output:
-	- Chrome package strips Firefox-specific manifest metadata
+	- Chrome/Edge package strips Firefox-specific manifest metadata
 	- Firefox package keeps Gecko metadata for AMO
 
-Supported Amazon Vine domains at the moment:
+Supported Amazon Vine domains (with automatic localization):
 
 - `www.amazon.com`
 - `www.amazon.co.uk`
@@ -93,6 +103,9 @@ Supported Amazon Vine domains at the moment:
 - `www.amazon.fr`
 - `www.amazon.it`
 - `www.amazon.es`
+- `www.amazon.ca`
+- `www.amazon.com.au`
+- `www.amazon.co.jp`
 
 ## Local Privacy Model
 

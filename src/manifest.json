@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Rolling Vine",
   "description": "Shows Amazon Vine rolling periods review risk for 30/60/90 day windows with user-triggered sync.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "minimum_chrome_version": "114",
   "icons": {
     "16": "assets/icon16.png",
@@ -30,7 +30,10 @@
     "https://www.amazon.de/vine/*",
     "https://www.amazon.fr/vine/*",
     "https://www.amazon.it/vine/*",
-    "https://www.amazon.es/vine/*"
+    "https://www.amazon.es/vine/*",
+    "https://www.amazon.ca/vine/*",
+    "https://www.amazon.com.au/vine/*",
+    "https://www.amazon.co.jp/vine/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -43,7 +46,10 @@
         "https://www.amazon.de/vine/*",
         "https://www.amazon.fr/vine/*",
         "https://www.amazon.it/vine/*",
-        "https://www.amazon.es/vine/*"
+        "https://www.amazon.es/vine/*",
+        "https://www.amazon.ca/vine/*",
+        "https://www.amazon.com.au/vine/*",
+        "https://www.amazon.co.jp/vine/*"
       ],
       "js": [
         "shared/core.js",
@@ -68,7 +74,10 @@
         "https://www.amazon.de/*",
         "https://www.amazon.fr/*",
         "https://www.amazon.it/*",
-        "https://www.amazon.es/*"
+        "https://www.amazon.es/*",
+        "https://www.amazon.ca/*",
+        "https://www.amazon.com.au/*",
+        "https://www.amazon.co.jp/*"
       ]
     }
   ],
