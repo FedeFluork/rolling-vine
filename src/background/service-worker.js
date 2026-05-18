@@ -2,7 +2,7 @@ if (typeof importScripts === "function") {
   importScripts("../shared/core.js", "../shared/storage.js");
 }
 
-const MAX_PAGES_PER_SECTION = 40;
+const MAX_PAGES_PER_SECTION = 72; // Max for Gold tier: 8 orders per day * 90 days = 720, 10 orders per page -> 72 pages
 const PAGE_SETTLE_MIN_MS = 700;
 const PAGE_SETTLE_MAX_MS = 1400;
 const PAGE_LOAD_TIMEOUT_MS = 25000;

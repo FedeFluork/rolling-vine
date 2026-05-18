@@ -418,6 +418,7 @@
       rootEl.__syncBtnDelegated = true;
     }
 
+    observeDarkModeChanges();
   }
 
   function findAccountAnchor() {
@@ -464,8 +465,6 @@
 
     syncBtn.appendChild(syncIcon);
     syncBtn.appendChild(document.createTextNode(ui.syncButton));
-    headerRow.appendChild(title);
-    headerRow.appendChild(syncBtn);
 
     const lastSync = document.createElement("div");
     lastSync.className = "rolling-vine-last-sync";
@@ -475,6 +474,14 @@
     syncValue.setAttribute("data-sync-value", "");
     syncValue.textContent = ui.never;
     lastSync.appendChild(syncValue);
+
+    const syncGroup = document.createElement("div");
+    syncGroup.className = "rolling-vine-sync-group";
+    syncGroup.appendChild(syncBtn);
+    syncGroup.appendChild(lastSync);
+
+    headerRow.appendChild(title);
+    headerRow.appendChild(syncGroup);
 
     const stage = document.createElement("div");
     stage.className = "rolling-vine-stage";
@@ -520,7 +527,6 @@
     donation.appendChild(donationButtons);
 
     fragment.appendChild(headerRow);
-    fragment.appendChild(lastSync);
     fragment.appendChild(stage);
     fragment.appendChild(grid);
     fragment.appendChild(donation);
@@ -552,7 +558,7 @@
 
     const risk = document.createElement("strong");
     risk.setAttribute("data-field", "riskLevel");
-    risk.textContent = getRiskLabel(period, "ok");
+    risk.textContent = ui.firstScanNeeded;
 
     row.appendChild(risk);
     return row;
@@ -708,10 +714,74 @@
       return ui.riskByPeriod[period] || ui.riskByPeriod[90];
     }
 
-    return ui.neutralRiskLabel;
+    if (status === "ok") {
+      return ui.neutralRiskLabel;
+    }
+
+    return ui.firstScanNeeded;
   }
 
   function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function detectForcedDarkMode() {
+    if (document.documentElement.hasAttribute("data-darkreader-mode") ||
+        document.documentElement.hasAttribute("data-darkreader-scheme") ||
+        document.querySelector('meta[name="darkreader"]') ||
+        document.querySelector('style.darkreader') ||
+        document.querySelector('style[class*="darkreader"]')) {
+      return true;
+    }
+
+    if (document.documentElement.classList.contains("totl-dark") ||
+        document.body && document.body.classList.contains("totl-dark")) {
+      return true;
+    }
+
+    const bg = window.getComputedStyle(document.body).backgroundColor;
+    const match = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+      const r = parseInt(match[1], 10);
+      const g = parseInt(match[2], 10);
+      const b = parseInt(match[3], 10);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      if (luminance < 0.3) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function applyDarkModeClass() {
+    if (!rootEl) return;
+    const isDark = detectForcedDarkMode();
+    rootEl.classList.toggle("rolling-vine-dark", isDark);
+  }
+
+  function observeDarkModeChanges() {
+    applyDarkModeClass();
+
+    const observer = new MutationObserver(() => {
+      applyDarkModeClass();
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-darkreader-mode", "data-darkreader-scheme", "class", "style"]
+    });
+
+    if (document.body) {
+      observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["class", "style"]
+      });
+    }
+
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true
+    });
   }
 })();

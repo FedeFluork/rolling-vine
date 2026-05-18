@@ -36,6 +36,7 @@
         30: "Low risk"
       },
       neutralRiskLabel: "Percentage in safe zone",
+      firstScanNeeded: "First scan needed",
       periodTitle: (days) => `Last ${days} days`,
       rateNA: "N/A",
       safeStoppedCaptcha: "Sync stopped: Amazon requested a CAPTCHA. Open the Vine page, complete the CAPTCHA challenge, then retry sync.",
@@ -69,6 +70,7 @@
         30: "Rischio basso"
       },
       neutralRiskLabel: "Percentuale in zona sicura",
+      firstScanNeeded: "Prima scansione necessaria",
       periodTitle: (days) => `Ultimi ${days} giorni`,
       rateNA: "N/D",
       safeStoppedCaptcha: "Sincronizzazione interrotta: Amazon ha richiesto un CAPTCHA. Apri la pagina Vine, completa il CAPTCHA e riprova.",
@@ -102,6 +104,7 @@
         30: "Riesgo bajo"
       },
       neutralRiskLabel: "Porcentaje en zona segura",
+      firstScanNeeded: "Primera sincronización necesaria",
       periodTitle: (days) => `Ultimos ${days} dias`,
       rateNA: "N/D",
       safeStoppedCaptcha: "Sincronizacion interrumpida: Amazon solicito un CAPTCHA. Abre la pagina de Vine, completa el CAPTCHA y vuelve a intentarlo.",
@@ -135,6 +138,7 @@
         30: "Niedriges Risiko"
       },
       neutralRiskLabel: "Prozentwert im sicheren Bereich",
+      firstScanNeeded: "Erster Scan erforderlich",
       periodTitle: (days) => `Letzte ${days} Tage`,
       rateNA: "k.A.",
       safeStoppedCaptcha: "Synchronisierung unterbrochen: Amazon hat ein CAPTCHA angefordert. Öffne die Vine-Seite, löse das CAPTCHA und versuche es erneut.",
@@ -168,6 +172,7 @@
         30: "Risque faible"
       },
       neutralRiskLabel: "Situation sous controle",
+      firstScanNeeded: "Première synchronisation nécessaire",
       periodTitle: (days) => `Derniers ${days} jours`,
       rateNA: "N/D",
       safeStoppedCaptcha: "Synchronisation interrompue: Amazon a demande un CAPTCHA. Ouvrez la page Vine, completez le CAPTCHA, puis reessayez.",
@@ -201,6 +206,7 @@
         30: "低リスク"
       },
       neutralRiskLabel: "安全圏内の割合",
+      firstScanNeeded: "初回スキャンが必要です",
       periodTitle: (days) => `過去${days}日間`,
       rateNA: "N/A",
       safeStoppedCaptcha: "同期が中断されました: AmazonがCAPTCHAを要求しました。Vineページを開き、CAPTCHAを完了してから再試行してください。",
