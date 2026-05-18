@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rolling Vine — Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="rv-options" id="rv-options">
+    <header class="rv-options-header">
+      <img class="rv-options-logo" src="../assets/icon48.png" alt="Rolling Vine">
+      <h1 class="rv-options-title" id="rv-title"></h1>
+    </header>
+
+    <div class="rv-options-notice" id="rv-notice"></div>
+
+    <form class="rv-options-form" id="rv-form">
+      <!-- Theme -->
+      <fieldset class="rv-options-field">
+        <legend id="rv-theme-label"></legend>
+        <label><input type="radio" name="theme" value="auto"> <span id="rv-theme-auto"></span></label>
+        <label><input type="radio" name="theme" value="light"> <span id="rv-theme-light"></span></label>
+        <label><input type="radio" name="theme" value="dark"> <span id="rv-theme-dark"></span></label>
+      </fieldset>
+
+      <!-- Placement -->
+      <fieldset class="rv-options-field">
+        <legend id="rv-placement-label"></legend>
+        <label><input type="radio" name="placement" value="above"> <span id="rv-placement-above"></span></label>
+        <label><input type="radio" name="placement" value="below"> <span id="rv-placement-below"></span></label>
+      </fieldset>
+
+      <!-- Visibility -->
+      <fieldset class="rv-options-field">
+        <legend id="rv-visibility-label"></legend>
+        <label class="rv-options-disabled"><input type="checkbox" value="90" checked disabled> <span id="rv-days90"></span></label>
+        <label><input type="checkbox" name="period60" value="60"> <span id="rv-days60"></span></label>
+        <label><input type="checkbox" name="period30" value="30"> <span id="rv-days30"></span></label>
+      </fieldset>
+
+      <!-- Language -->
+      <fieldset class="rv-options-field">
+        <legend id="rv-language-label"></legend>
+        <select name="language" id="rv-language">
+          <option value="auto" id="rv-lang-auto"></option>
+          <option value="en">English</option>
+          <option value="it">Italiano</option>
+          <option value="es">Español</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="ja">日本語</option>
+        </select>
+      </fieldset>
+    </form>
+
+    <div class="rv-options-actions">
+      <button class="rv-options-reset-btn" id="rv-reset-btn"></button>
+    </div>
+
+    <div class="rv-options-toast" id="rv-toast" hidden></div>
+  </div>
+
+  <script src="../shared/core.js"></script>
+  <script src="../shared/storage.js"></script>
+  <script src="../shared/i18n.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

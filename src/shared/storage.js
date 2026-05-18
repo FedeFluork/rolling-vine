@@ -2,7 +2,8 @@
   const STORAGE_KEYS = {
     syncState: "rollingVine.syncState",
     metrics: "rollingVine.metrics",
-    syncCache: "rollingVine.syncCache"
+    syncCache: "rollingVine.syncCache",
+    settings: "rollingVine.settings"
   };
 
   const hasBrowserStorage =
@@ -105,14 +106,46 @@
     return merged;
   }
 
+  const DEFAULT_SETTINGS = {
+    theme: "auto",
+    placement: "above",
+    visiblePeriods: [90, 60, 30],
+    language: "auto"
+  };
+
+  async function getSettings() {
+    const data = await getStorage([STORAGE_KEYS.settings]);
+    const stored = data[STORAGE_KEYS.settings] || {};
+    return { ...DEFAULT_SETTINGS, ...stored };
+  }
+
+  async function setSettings(nextSettings) {
+    const current = await getSettings();
+    const merged = { ...current, ...nextSettings };
+    await setStorage({ [STORAGE_KEYS.settings]: merged });
+    return merged;
+  }
+
+  async function clearAll() {
+    if (hasBrowserStorage) {
+      await globalThis.browser.storage.local.clear();
+    } else {
+      await callChrome(chrome.storage.local.clear.bind(chrome.storage.local));
+    }
+  }
+
   const api = {
     STORAGE_KEYS,
+    DEFAULT_SETTINGS,
     getSyncState,
     setSyncState,
     getMetrics,
     setMetrics,
     getSyncCache,
-    setSyncCache
+    setSyncCache,
+    getSettings,
+    setSettings,
+    clearAll
   };
 
   globalThis.RollingVineStorage = api;

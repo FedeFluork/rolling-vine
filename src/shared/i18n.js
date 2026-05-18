@@ -45,7 +45,32 @@
       safeStoppedWithError: (errorText) => `Sync stopped safely: ${errorText}`,
       safeStoppedDefault: "Sync stopped safely. Retry sync in a few moments.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 more order allowed" : `${count} more orders allowed`),
-      moreReviewsNeeded: (count) => (count === 1 ? "1 more review needed" : `${count} more reviews needed`)
+      moreReviewsNeeded: (count) => (count === 1 ? "1 more review needed" : `${count} more reviews needed`),
+      popup: {
+        noData: "No data yet. Run a sync from the Vine account page.",
+        openAccount: "Open Vine Account",
+        settings: "Settings"
+      },
+      options: {
+        title: "Rolling Vine — Settings",
+        themeLabel: "Theme",
+        themeAuto: "Auto (detect from page)",
+        themeLight: "Light",
+        themeDark: "Dark",
+        placementLabel: "Card placement",
+        placementAbove: "Above official metrics",
+        placementBelow: "Below official metrics",
+        visibilityLabel: "Visible rolling periods",
+        days90: "90 days (always visible)",
+        days60: "60 days",
+        days30: "30 days",
+        languageLabel: "Language",
+        languageAuto: "Auto (detect from domain)",
+        resetButton: "Reset all settings and data",
+        resetConfirm: "Are you sure? This will erase all extension data and settings.",
+        savedNotice: "Changes will take effect next time you open the Vine account page. Reload it if already open.",
+        saved: "Settings saved"
+      }
     },
     it: {
       syncButton: "Sincronizza la cronologia Vine",
@@ -79,7 +104,32 @@
       safeStoppedWithError: (errorText) => `Sincronizzazione interrotta in sicurezza: ${errorText}`,
       safeStoppedDefault: "Sincronizzazione interrotta in sicurezza. Riprova tra qualche istante.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 ordine in più consentito" : `${count} ordini in più consentiti`),
-      moreReviewsNeeded: (count) => (count === 1 ? "1 recensione in più necessaria" : `${count} recensioni in più necessarie`)
+      moreReviewsNeeded: (count) => (count === 1 ? "1 recensione in più necessaria" : `${count} recensioni in più necessarie`),
+      popup: {
+        noData: "Nessun dato disponibile. Esegui una sincronizzazione dalla pagina account Vine.",
+        openAccount: "Apri Account Vine",
+        settings: "Impostazioni"
+      },
+      options: {
+        title: "Rolling Vine — Impostazioni",
+        themeLabel: "Tema",
+        themeAuto: "Automatico (rileva dalla pagina)",
+        themeLight: "Chiaro",
+        themeDark: "Scuro",
+        placementLabel: "Posizionamento card",
+        placementAbove: "Sopra le metriche ufficiali",
+        placementBelow: "Sotto le metriche ufficiali",
+        visibilityLabel: "Periodi visibili",
+        days90: "90 giorni (sempre visibile)",
+        days60: "60 giorni",
+        days30: "30 giorni",
+        languageLabel: "Lingua",
+        languageAuto: "Automatica (rileva dal dominio)",
+        resetButton: "Ripristina impostazioni e dati",
+        resetConfirm: "Sei sicuro? Questa azione cancellerà tutti i dati e le impostazioni dell'estensione.",
+        savedNotice: "Le modifiche avranno effetto alla prossima apertura della pagina account Vine. Ricaricala se è già aperta.",
+        saved: "Impostazioni salvate"
+      }
     },
     es: {
       syncButton: "Sincronizar historial de Vine",
@@ -113,7 +163,32 @@
       safeStoppedWithError: (errorText) => `Sincronizacion interrumpida de forma segura: ${errorText}`,
       safeStoppedDefault: "Sincronizacion interrumpida de forma segura. Reintenta en unos momentos.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 pedido mas permitido" : `${count} pedidos mas permitidos`),
-      moreReviewsNeeded: (count) => (count === 1 ? "1 resena mas necesaria" : `${count} resenas mas necesarias`)
+      moreReviewsNeeded: (count) => (count === 1 ? "1 resena mas necesaria" : `${count} resenas mas necesarias`),
+      popup: {
+        noData: "Sin datos. Ejecuta una sincronización desde la página de cuenta Vine.",
+        openAccount: "Abrir Cuenta Vine",
+        settings: "Configuración"
+      },
+      options: {
+        title: "Rolling Vine — Configuración",
+        themeLabel: "Tema",
+        themeAuto: "Automático (detectar de la página)",
+        themeLight: "Claro",
+        themeDark: "Oscuro",
+        placementLabel: "Posición de las tarjetas",
+        placementAbove: "Encima de las métricas oficiales",
+        placementBelow: "Debajo de las métricas oficiales",
+        visibilityLabel: "Períodos visibles",
+        days90: "90 días (siempre visible)",
+        days60: "60 días",
+        days30: "30 días",
+        languageLabel: "Idioma",
+        languageAuto: "Automático (detectar del dominio)",
+        resetButton: "Restablecer configuración y datos",
+        resetConfirm: "¿Estás seguro? Esto borrará todos los datos y configuraciones de la extensión.",
+        savedNotice: "Los cambios se aplicarán la próxima vez que abras la página de cuenta Vine. Recárgala si ya está abierta.",
+        saved: "Configuración guardada"
+      }
     },
     de: {
       syncButton: "Vine-Verlauf synchronisieren",
@@ -147,7 +222,32 @@
       safeStoppedWithError: (errorText) => `Synchronisierung sicher unterbrochen: ${errorText}`,
       safeStoppedDefault: "Synchronisierung sicher unterbrochen. Bitte in kurzer Zeit erneut versuchen.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 weitere Bestellung erlaubt" : `${count} weitere Bestellungen erlaubt`),
-      moreReviewsNeeded: (count) => (count === 1 ? "1 weitere Rezension erforderlich" : `${count} weitere Rezensionen erforderlich`)
+      moreReviewsNeeded: (count) => (count === 1 ? "1 weitere Rezension erforderlich" : `${count} weitere Rezensionen erforderlich`),
+      popup: {
+        noData: "Noch keine Daten. Führe eine Synchronisierung auf der Vine-Kontoseite durch.",
+        openAccount: "Vine-Konto öffnen",
+        settings: "Einstellungen"
+      },
+      options: {
+        title: "Rolling Vine — Einstellungen",
+        themeLabel: "Design",
+        themeAuto: "Automatisch (von Seite erkennen)",
+        themeLight: "Hell",
+        themeDark: "Dunkel",
+        placementLabel: "Kartenplatzierung",
+        placementAbove: "Über den offiziellen Metriken",
+        placementBelow: "Unter den offiziellen Metriken",
+        visibilityLabel: "Sichtbare Zeiträume",
+        days90: "90 Tage (immer sichtbar)",
+        days60: "60 Tage",
+        days30: "30 Tage",
+        languageLabel: "Sprache",
+        languageAuto: "Automatisch (vom Domain erkennen)",
+        resetButton: "Einstellungen und Daten zurücksetzen",
+        resetConfirm: "Bist du sicher? Alle Daten und Einstellungen der Erweiterung werden gelöscht.",
+        savedNotice: "Änderungen werden beim nächsten Öffnen der Vine-Kontoseite wirksam. Lade sie neu, falls sie bereits geöffnet ist.",
+        saved: "Einstellungen gespeichert"
+      }
     },
     fr: {
       syncButton: "Synchroniser l'historique Vine",
@@ -181,7 +281,32 @@
       safeStoppedWithError: (errorText) => `Synchronisation interrompue de facon securisee: ${errorText}`,
       safeStoppedDefault: "Synchronisation interrompue de facon securisee. Reessayez dans quelques instants.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 commande supplementaire autorisee" : `${count} commandes supplementaires autorisees`),
-      moreReviewsNeeded: (count) => (count === 1 ? "1 avis supplementaire necessaire" : `${count} avis supplementaires necessaires`)
+      moreReviewsNeeded: (count) => (count === 1 ? "1 avis supplementaire necessaire" : `${count} avis supplementaires necessaires`),
+      popup: {
+        noData: "Aucune donnée. Lancez une synchronisation depuis la page du compte Vine.",
+        openAccount: "Ouvrir Compte Vine",
+        settings: "Paramètres"
+      },
+      options: {
+        title: "Rolling Vine — Paramètres",
+        themeLabel: "Thème",
+        themeAuto: "Automatique (détecter depuis la page)",
+        themeLight: "Clair",
+        themeDark: "Sombre",
+        placementLabel: "Emplacement des cartes",
+        placementAbove: "Au-dessus des métriques officielles",
+        placementBelow: "En dessous des métriques officielles",
+        visibilityLabel: "Périodes visibles",
+        days90: "90 jours (toujours visible)",
+        days60: "60 jours",
+        days30: "30 jours",
+        languageLabel: "Langue",
+        languageAuto: "Automatique (détecter depuis le domaine)",
+        resetButton: "Réinitialiser paramètres et données",
+        resetConfirm: "Êtes-vous sûr ? Toutes les données et paramètres de l'extension seront supprimés.",
+        savedNotice: "Les modifications prendront effet à la prochaine ouverture de la page compte Vine. Rechargez-la si elle est déjà ouverte.",
+        saved: "Paramètres enregistrés"
+      }
     },
     ja: {
       syncButton: "Vine履歴を同期",
@@ -215,7 +340,32 @@
       safeStoppedWithError: (errorText) => `同期が安全に中断されました: ${errorText}`,
       safeStoppedDefault: "同期が安全に中断されました。しばらくしてから再試行してください。",
       moreOrdersAllowed: (count) => `あと${count}件の注文が可能`,
-      moreReviewsNeeded: (count) => `あと${count}件のレビューが必要`
+      moreReviewsNeeded: (count) => `あと${count}件のレビューが必要`,
+      popup: {
+        noData: "データがありません。Vineアカウントページから同期を実行してください。",
+        openAccount: "Vineアカウントを開く",
+        settings: "設定"
+      },
+      options: {
+        title: "Rolling Vine — 設定",
+        themeLabel: "テーマ",
+        themeAuto: "自動（ページから検出）",
+        themeLight: "ライト",
+        themeDark: "ダーク",
+        placementLabel: "カード配置",
+        placementAbove: "公式メトリクスの上",
+        placementBelow: "公式メトリクスの下",
+        visibilityLabel: "表示する期間",
+        days90: "90日間（常に表示）",
+        days60: "60日間",
+        days30: "30日間",
+        languageLabel: "言語",
+        languageAuto: "自動（ドメインから検出）",
+        resetButton: "設定とデータをリセット",
+        resetConfirm: "本当によろしいですか？拡張機能のすべてのデータと設定が削除されます。",
+        savedNotice: "変更はVineアカウントページを次に開いたときに反映されます。既に開いている場合はリロードしてください。",
+        saved: "設定を保存しました"
+      }
     }
   };
 

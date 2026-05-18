@@ -1,0 +1,185 @@
+/* ─── Base ─── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 320px;
+  font-family: "Amazon Ember", "Segoe UI", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ─── Light theme (default) ─── */
+.rv-popup {
+  padding: 14px;
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+.rv-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rv-popup-logo {
+  width: 24px;
+  height: 24px;
+}
+
+.rv-popup-title {
+  font-size: 15px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.rv-popup-settings-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.rv-popup-settings-btn:hover {
+  background: #f0f0f0;
+  color: #111;
+}
+
+/* ─── Cards ─── */
+.rv-popup-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-popup-card {
+  border: 1px solid #d5d9d9;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fafafa;
+}
+
+.rv-popup-card.is-risk {
+  border-color: #b00020;
+  box-shadow: inset 0 0 0 1px rgba(176, 0, 32, 0.15);
+}
+
+.rv-popup-card.is-risk[data-period="90"] {
+  background: #ffe1e1;
+}
+
+.rv-popup-card.is-risk[data-period="60"] {
+  background: #ffefef;
+}
+
+.rv-popup-card.is-risk[data-period="30"] {
+  background: #fff7f7;
+}
+
+.rv-popup-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.rv-popup-card-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.rv-popup-card-row strong {
+  font-weight: 600;
+}
+
+.rv-popup-card-risk {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #d5d9d9;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #565959;
+}
+
+.rv-popup-card.is-risk .rv-popup-card-risk {
+  color: #7a0012;
+  border-top-color: rgba(196, 0, 0, 0.2);
+}
+
+.rv-popup-card-status-info {
+  text-align: center;
+  font-size: 11px;
+  color: #565959;
+  margin-top: 4px;
+}
+
+/* ─── No data ─── */
+.rv-popup-no-data {
+  text-align: center;
+  color: #666;
+  padding: 20px 10px;
+  font-size: 12px;
+}
+
+/* ─── Dark theme ─── */
+.rv-popup.rv-dark {
+  background: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.rv-popup.rv-dark .rv-popup-settings-btn {
+  color: #aaa;
+}
+
+.rv-popup.rv-dark .rv-popup-settings-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+.rv-popup.rv-dark .rv-popup-card {
+  background: #2a2a2a;
+  border-color: #3a3a3a;
+}
+
+.rv-popup.rv-dark .rv-popup-card.is-risk[data-period="90"] {
+  background: #3d1a1a;
+}
+
+.rv-popup.rv-dark .rv-popup-card.is-risk[data-period="60"] {
+  background: #331515;
+}
+
+.rv-popup.rv-dark .rv-popup-card.is-risk[data-period="30"] {
+  background: #2b1212;
+}
+
+.rv-popup.rv-dark .rv-popup-card.is-risk {
+  border-color: #992233;
+  box-shadow: inset 0 0 0 1px rgba(176, 0, 32, 0.3);
+}
+
+.rv-popup.rv-dark .rv-popup-card-risk {
+  border-top-color: #3a3a3a;
+  color: #ccc;
+}
+
+.rv-popup.rv-dark .rv-popup-card.is-risk .rv-popup-card-risk {
+  color: #ff6b6b;
+  border-top-color: rgba(255, 80, 80, 0.25);
+}
+
+.rv-popup.rv-dark .rv-popup-card-status-info {
+  color: #999;
+}
+
+.rv-popup.rv-dark .rv-popup-no-data {
+  color: #999;
+}

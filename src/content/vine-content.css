@@ -98,6 +98,12 @@
   }
 }
 
+.rolling-vine-separator {
+  border: none;
+  border-top: 1px solid #e3e6e6;
+  margin: 12px 0 0;
+}
+
 .rolling-vine-grid {
   margin-top: 12px;
   display: grid;
@@ -297,6 +303,10 @@
 
 .rolling-vine-dark .rolling-vine-status-info-row strong {
   color: #bbb;
+}
+
+.rolling-vine-dark .rolling-vine-separator {
+  border-top-color: #3a3a3a;
 }
 
 .rolling-vine-dark .rolling-vine-donation {

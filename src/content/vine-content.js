@@ -13,7 +13,8 @@
 
   let rootEl = null;
   let lastKnownHref = location.href;
-  const ui = RollingVineI18n.resolveUiStrings(location.hostname);
+  let currentSettings = null;
+  let ui = RollingVineI18n.resolveUiStrings(location.hostname);
 
   window.addEventListener("error", (event) => {
     console.error(`${LOG_PREFIX} uncaught error`, event.message, event.filename, event.lineno);
@@ -25,9 +26,24 @@
 
   init();
 
-  function init() {
+  async function init() {
+    currentSettings = await RollingVineStorage.getSettings();
+    if (currentSettings.language && currentSettings.language !== "auto") {
+      const hostMap = { en: "www.amazon.com", it: "www.amazon.it", es: "www.amazon.es", de: "www.amazon.de", fr: "www.amazon.fr", ja: "www.amazon.co.jp" };
+      ui = RollingVineI18n.resolveUiStrings(hostMap[currentSettings.language] || location.hostname);
+    }
+
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!message || !message.type) {
+        return;
+      }
+
+      if (message.type === "rollingVine.triggerSync") {
+        if (isAccountPage()) {
+          triggerSyncFromPopup().then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
+          return true;
+        }
+        sendResponse({ ok: false });
         return;
       }
 
@@ -167,6 +183,19 @@
     return ACCOUNT_PATH_REGEX.test(location.pathname);
   }
 
+  async function triggerSyncFromPopup() {
+    const syncBtn = rootEl && rootEl.querySelector(".rolling-vine-sync-btn");
+    if (syncBtn && !syncBtn.disabled) {
+      syncBtn.click();
+      return;
+    }
+    await sendRuntimeMessage({
+      type: "rollingVine.startSync",
+      origin: location.origin,
+      pageUrl: location.href
+    });
+  }
+
   function inferSafeStopErrorCode(lastError) {
     const normalized = RollingVineCore.normalizeText(lastError || "");
 
@@ -225,15 +254,39 @@
       return;
     }
 
-    const anchor = findAccountAnchor();
-    if (!anchor) {
-      return;
-    }
+    const dashboard = document.getElementById("vvp-account-dashboard");
+    if (!dashboard) {
+      const fallback = findAccountAnchor();
+      if (!fallback) return;
+      rootEl = document.createElement("section");
+      rootEl.className = "rolling-vine-root";
+      rootEl.appendChild(buildAccountLayout());
+      fallback.appendChild(rootEl);
+    } else {
+      const rows = dashboard.querySelectorAll(":scope > .a-row");
+      const wrapperRow = document.createElement("div");
+      wrapperRow.className = "a-row";
+      rootEl = document.createElement("section");
+      rootEl.className = "rolling-vine-root";
+      rootEl.appendChild(buildAccountLayout());
+      wrapperRow.appendChild(rootEl);
 
-    rootEl = document.createElement("section");
-    rootEl.className = "rolling-vine-root";
-    rootEl.appendChild(buildAccountLayout());
-    anchor.appendChild(rootEl);
+      if (currentSettings && currentSettings.placement === "above") {
+        const refRow = rows.length >= 1 ? rows[0] : null;
+        if (refRow) {
+          refRow.after(wrapperRow);
+        } else {
+          dashboard.appendChild(wrapperRow);
+        }
+      } else {
+        const refRow = rows.length >= 2 ? rows[1] : rows[rows.length - 1] || null;
+        if (refRow) {
+          refRow.after(wrapperRow);
+        } else {
+          dashboard.appendChild(wrapperRow);
+        }
+      }
+    }
 
     wireDonationLinks();
 
@@ -289,11 +342,6 @@
   }
 
   function findAccountAnchor() {
-    const dashboardRow = document.querySelector("#vvp-account-dashboard > .a-row");
-    if (dashboardRow) {
-      return dashboardRow;
-    }
-
     const selectors = [
       "#vvp-account-overview",
       "#vvp-account-page",
@@ -354,11 +402,17 @@
     stage.className = "rolling-vine-stage";
     stage.setAttribute("data-sync-stage", "");
 
+    const separator = document.createElement("hr");
+    separator.className = "rolling-vine-separator";
+
     const grid = document.createElement("div");
     grid.className = "rolling-vine-grid";
-    grid.appendChild(buildCard(90));
-    grid.appendChild(buildCard(60));
-    grid.appendChild(buildCard(30));
+    const visiblePeriods = (currentSettings && currentSettings.visiblePeriods) || [90, 60, 30];
+    for (const period of RollingVineCore.PERIODS) {
+      if (visiblePeriods.includes(period)) {
+        grid.appendChild(buildCard(period));
+      }
+    }
 
     const donation = document.createElement("div");
     donation.className = "rolling-vine-donation";
@@ -395,6 +449,7 @@
 
     fragment.appendChild(headerRow);
     fragment.appendChild(stage);
+    fragment.appendChild(separator);
     fragment.appendChild(grid);
     fragment.appendChild(donation);
 
@@ -528,6 +583,8 @@
     }
 
     for (const period of RollingVineCore.PERIODS) {
+      const visiblePeriods = (currentSettings && currentSettings.visiblePeriods) || [90, 60, 30];
+      if (!visiblePeriods.includes(period)) continue;
       const card = rootEl.querySelector(`.rolling-vine-card[data-period="${period}"]`);
       if (!card) {
         continue;
@@ -623,7 +680,14 @@
 
   function applyDarkModeClass() {
     if (!rootEl) return;
-    const isDark = detectForcedDarkMode();
+    let isDark;
+    if (currentSettings && currentSettings.theme === "dark") {
+      isDark = true;
+    } else if (currentSettings && currentSettings.theme === "light") {
+      isDark = false;
+    } else {
+      isDark = detectForcedDarkMode();
+    }
     rootEl.classList.toggle("rolling-vine-dark", isDark);
   }
 
