@@ -27,9 +27,14 @@ On the Vine Account page (`/vine/account`), the extension injects:
 	- Actionable info: how many more orders are allowed or reviews are needed
 - Sync controls:
 	- `Sync Vine history` button
+	- Live sync progress state (starting, orders, reviews)
 	- `Last sync: <timestamp>` label
+- Safe-stop feedback with localized reason when sync is interrupted (CAPTCHA, expired session, timeout, unexpected markup)
 - A compact donation row with links to Ko-fi and PayPal
-- All UI labels are automatically localized based on the Amazon domain (English, Italian, Spanish, German, French, Japanese)
+- All UI labels are localized (English, Italian, Spanish, German, French, Japanese)
+
+From the extension toolbar popup, you get a compact risk overview of your selected rolling periods.
+From the settings page, you can customize theme, card placement, visible periods, and language.
 
 <p align="center">
 	<img src="images/screenshot.png" alt="Rolling Vine screenshot" />
@@ -40,8 +45,8 @@ On the Vine Account page (`/vine/account`), the extension injects:
 Sync is user-triggered from your Vine Account page at `/vine/account`.
 
 1. User clicks `Sync Vine history`.
-2. Service worker opens a non-active background tab.
-3. Worker scans pages in this strict order:
+2. The background service worker starts a fetch-based sync job (no automatic tab opening or tab navigation).
+3. It requests paginated Vine pages in this strict order:
 	 - Orders:
 		 - `/vine/orders`
 		 - `/vine/orders?page=2`
@@ -52,9 +57,13 @@ Sync is user-triggered from your Vine Account page at `/vine/account`.
 		 - `/vine/vine-reviews?page=2&review-type=completed`
 		 - `/vine/vine-reviews?page=3&review-type=completed`
 		 - ...
-4. It counts only items in the last 90 days from sync start.
-5. It stops section scan when the parser detects older-than-90-day items or matches a cached checkpoint from the previous sync.
-6. It stores 90/60/30-day aggregates locally, caches order timestamps for incremental sync, and updates Account cards.
+4. Each page fetch uses retry attempts, timeout guards, and pacing delays.
+5. It counts only items in the last 90 days from sync start.
+6. It stops scanning when one of these conditions is met:
+	 - items older than 90 days are reached
+	 - no next page is available
+	 - for orders, the last known checkpoint timestamp is reached
+7. It stores 90/60/30-day aggregates locally, updates sync metadata, caches order timestamps for incremental sync, and refreshes UI data used by both the account page and popup.
 
 Sync uses a checkpoint cache: on subsequent runs it can skip already-scanned order pages, making repeat syncs faster.
 
@@ -65,11 +74,21 @@ The sync pipeline stops safely and immediately if it detects:
 - CAPTCHA pages
 - Login/session expiration
 - Empty or unexpected markup (no parsable records)
-- Navigation timeout
+- Request timeout or repeated fetch failures
 
 When safe-stop happens, previous valid metrics remain visible and the UI shows a user-friendly, localized message describing the specific reason (e.g. CAPTCHA requested, session expired, page timeout).
 
-The worker uses small bounded random delays between page transitions for load pacing and stability.
+The worker uses small bounded random delays between requests for load pacing and stability.
+
+## Settings and Customization
+
+The options page provides:
+
+- Theme: Auto, Light, Dark
+- Card placement on `/vine/account`: Above or Below official metrics
+- Visible rolling periods: 90 days (always enabled), optional 60 days and 30 days
+- UI language override: Auto, English, Italian, Spanish, German, French, Japanese
+- Full reset action for extension settings and stored metrics
 
 ## Data Model and Risk Logic
 
@@ -164,6 +183,13 @@ npm run lint
 1. Open `about:debugging#/runtime/this-firefox`
 2. Click `Load Temporary Add-on`
 3. Select `dist/firefox/manifest.json` (or `src/manifest.json`)
+
+### Edge
+
+1. Open `edge://extensions`
+2. Enable Developer mode
+3. Click `Load unpacked`
+4. Select `dist/chrome` (or `src` for quick dev)
 
 ## Assumptions and Limitations
 
