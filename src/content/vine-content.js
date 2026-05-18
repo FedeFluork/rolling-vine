@@ -297,6 +297,12 @@
 
     if (!rootEl.__syncBtnDelegated) {
       rootEl.addEventListener("click", async (event) => {
+        const settingsBtn = event.target.closest(".rolling-vine-settings-btn");
+        if (settingsBtn) {
+          sendRuntimeMessage({ type: "rollingVine.openOptions" }).catch(() => undefined);
+          return;
+        }
+
         const syncBtn = event.target.closest(".rolling-vine-sync-btn");
         if (!syncBtn) {
           return;
@@ -381,6 +387,14 @@
     titleWrap.appendChild(titleIcon);
     titleWrap.appendChild(title);
 
+    const settingsBtn = document.createElement("button");
+    settingsBtn.className = "rolling-vine-settings-btn";
+    settingsBtn.type = "button";
+    settingsBtn.title = (ui.popup && ui.popup.settings) || "Settings";
+    settingsBtn.setAttribute("aria-label", (ui.popup && ui.popup.settings) || "Settings");
+    settingsBtn.innerHTML =
+      '<svg class="rolling-vine-settings-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-1.42 3.42 2 2 0 01-1.42-.59l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1.08-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-3.42-1.42 2 2 0 01.59-1.42l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1.08 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 011.42-3.42 2 2 0 011.42.59l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001.08 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 013.42 1.42 2 2 0 01-.59 1.42l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1.08z"></path></svg>';
+
     const syncBtn = document.createElement("button");
     syncBtn.className = "rolling-vine-sync-btn";
     syncBtn.type = "button";
@@ -406,8 +420,13 @@
     syncGroup.appendChild(syncBtn);
     syncGroup.appendChild(lastSync);
 
+    const actionsWrap = document.createElement("div");
+    actionsWrap.className = "rolling-vine-actions";
+    actionsWrap.appendChild(settingsBtn);
+    actionsWrap.appendChild(syncGroup);
+
     headerRow.appendChild(titleWrap);
-    headerRow.appendChild(syncGroup);
+    headerRow.appendChild(actionsWrap);
 
     const stage = document.createElement("div");
     stage.className = "rolling-vine-stage";

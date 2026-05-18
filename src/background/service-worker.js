@@ -43,6 +43,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     return true;
   }
+
+  if (message.type === "rollingVine.openOptions") {
+    chrome.runtime.openOptionsPage(() => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        sendResponse({ ok: false, error: err.message });
+        return;
+      }
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
 });
 
 async function handleStartSync(sender, message) {
