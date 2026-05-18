@@ -366,9 +366,20 @@
     const headerRow = document.createElement("div");
     headerRow.className = "rolling-vine-header-row";
 
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "rolling-vine-title-wrap";
+
+    const titleIcon = document.createElement("img");
+    titleIcon.className = "rolling-vine-title-icon";
+    titleIcon.alt = "Rolling Vine";
+    titleIcon.src = chrome.runtime.getURL("/assets/icon48.png");
+
     const title = document.createElement("h3");
     title.className = "rolling-vine-title";
     title.textContent = "Rolling Vine";
+
+    titleWrap.appendChild(titleIcon);
+    titleWrap.appendChild(title);
 
     const syncBtn = document.createElement("button");
     syncBtn.className = "rolling-vine-sync-btn";
@@ -395,7 +406,7 @@
     syncGroup.appendChild(syncBtn);
     syncGroup.appendChild(lastSync);
 
-    headerRow.appendChild(title);
+    headerRow.appendChild(titleWrap);
     headerRow.appendChild(syncGroup);
 
     const stage = document.createElement("div");

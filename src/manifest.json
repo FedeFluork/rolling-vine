@@ -70,7 +70,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "content/assets/*.svg"
+        "content/assets/*.svg",
+        "/assets/icon48.png"
       ],
       "matches": [
         "https://www.amazon.com/*",

@@ -3,7 +3,7 @@
   padding: 14px;
   border: 1px solid #d5d9d9;
   border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  background: #fafafa;
   font-family: "Amazon Ember", "Segoe UI", "Helvetica Neue", sans-serif;
   color: #0f1111;
 }
@@ -20,6 +20,18 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
+}
+
+.rolling-vine-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.rolling-vine-title-icon {
+  width: 35px;
+  height: 35px;
+  flex-shrink: 0;
 }
 
 .rolling-vine-sync-btn {
@@ -235,7 +247,7 @@
 
 /* Dark mode */
 .rolling-vine-root.rolling-vine-dark {
-  background: linear-gradient(180deg, #1e1e1e 0%, #181818 100%);
+  background: #181818;
   border-color: #3a3a3a;
   color: #e0e0e0;
 }
