@@ -21,8 +21,7 @@
     }
   },
   "permissions": [
-    "storage",
-    "tabs"
+    "storage"
   ],
   "host_permissions": [
     "https://www.amazon.com/vine/*",

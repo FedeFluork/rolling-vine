@@ -6,8 +6,8 @@ const MAX_PAGES_PER_SECTION = 72; // Max for Gold tier: 8 orders per day * 90 da
 const PAGE_SETTLE_MIN_MS = 700;
 const PAGE_SETTLE_MAX_MS = 1400;
 const PAGE_LOAD_TIMEOUT_MS = 25000;
-const EXTRACT_ATTEMPTS = 5;
-const EXTRACT_RETRY_DELAY_MS = 900;
+const FETCH_ATTEMPTS = 3;
+const FETCH_RETRY_DELAY_MS = 900;
 const LOG_PREFIX = "[rolling-vine/bg]";
 const SAFE_STOP_ERROR_CODES = {
   captcha: "captcha",
@@ -107,14 +107,8 @@ async function runSync({ origin, accountTabId }) {
     progress: { section: "orders", page: 1 }
   });
 
-  let tempTabId = null;
-
   try {
-    tempTabId = await createHiddenTab(`${origin}/vine/orders`);
-    await restoreAccountTabFocus(accountTabId);
-
     const ordersResult = await scanSection({
-      tabId: tempTabId,
       origin,
       section: "orders",
       accountTabId,
@@ -156,7 +150,6 @@ async function runSync({ origin, accountTabId }) {
     });
 
     const reviewsResult = await scanSection({
-      tabId: tempTabId,
       origin,
       section: "reviews",
       accountTabId,
@@ -208,10 +201,6 @@ async function runSync({ origin, accountTabId }) {
       error: safeStopError.message,
       errorCode: safeStopError.code
     });
-  } finally {
-    if (tempTabId !== null) {
-      await closeTabSafe(tempTabId);
-    }
   }
 }
 
@@ -243,7 +232,7 @@ function classifySafeStopError(error) {
   return { code: SAFE_STOP_ERROR_CODES.unknown, message };
 }
 
-async function scanSection({ tabId, origin, section, accountTabId, nowMs, ordersCheckpointTimestamp = null }) {
+async function scanSection({ origin, section, accountTabId, nowMs, ordersCheckpointTimestamp = null }) {
   const dateMsSet = new Set();
   const normalizedOrdersCheckpointTimestamp =
     section === "orders" ? Number(ordersCheckpointTimestamp) || null : null;
@@ -257,42 +246,41 @@ async function scanSection({ tabId, origin, section, accountTabId, nowMs, orders
       progress: { section, page }
     });
 
-    await navigateTab(tabId, url);
-    await waitForTabComplete(tabId, PAGE_LOAD_TIMEOUT_MS);
+    const html = await fetchPageWithRetries(url);
     await randomDelay(PAGE_SETTLE_MIN_MS, PAGE_SETTLE_MAX_MS);
 
-    const response = await extractFromTabWithRetries(tabId, section, nowMs);
-
-    if (!response || !response.ok) {
-      const reason = response && response.reason ? response.reason : "Unexpected extraction failure";
-      throw new Error(`${section} sync stopped safely: ${reason}`);
+    const safetyIssue = detectSafetyStop(html);
+    if (safetyIssue) {
+      throw new Error(`${section} sync stopped safely: ${safetyIssue}`);
     }
 
-    if (!response.items || response.items.length === 0) {
+    const timestamps = extractTimestamps(html);
+
+    if (timestamps.length === 0) {
       throw new Error(`${section} sync stopped safely: empty page or unexpected markup`);
     }
 
-    for (const item of response.items) {
-      if (item && item.dateMs) {
-        dateMsSet.add(item.dateMs);
-      }
+    for (const dateMs of timestamps) {
+      dateMsSet.add(dateMs);
     }
 
     if (
       section === "orders" &&
       normalizedOrdersCheckpointTimestamp &&
-      response.items.some((item) => item && item.dateMs === normalizedOrdersCheckpointTimestamp)
+      timestamps.includes(normalizedOrdersCheckpointTimestamp)
     ) {
       stopReason = "matched-last-orders-timestamp";
       break;
     }
 
-    if (response.reachedOlderThan90) {
+    const cutoffMs = nowMs - 90 * 24 * 60 * 60 * 1000;
+    const oldestMs = Math.min(...timestamps);
+    if (oldestMs < cutoffMs) {
       stopReason = "older-than-90-days";
       break;
     }
 
-    if (!response.hasNextPage) {
+    if (!detectNextPage(html)) {
       stopReason = "no-next-page";
       break;
     }
@@ -327,108 +315,109 @@ function buildSectionUrl(origin, section, page) {
   throw new Error(`Unsupported section: ${section}`);
 }
 
-function createHiddenTab(url) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url, active: false }, (tab) => {
-      const err = chrome.runtime.lastError;
-      if (err) {
-        reject(new Error(err.message));
-        return;
-      }
-      resolve(tab.id);
+async function fetchPage(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PAGE_LOAD_TIMEOUT_MS);
+
+  try {
+    const acceptLanguage = navigator.language || navigator.languages?.join(",") || "en-US,en;q=0.9";
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": navigator.userAgent,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": acceptLanguage,
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+      },
+      credentials: "include",
+      signal: controller.signal,
     });
-  });
-}
+    clearTimeout(timeout);
 
-function navigateTab(tabId, url) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.update(tabId, { url, active: false }, () => {
-      const err = chrome.runtime.lastError;
-      if (err) {
-        reject(new Error(err.message));
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
-function waitForTabComplete(tabId, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
-      reject(new Error("Page load timeout"));
-    }, timeoutMs);
-
-    function listener(updatedTabId, changeInfo) {
-      if (updatedTabId === tabId && changeInfo.status === "complete") {
-        clearTimeout(timeout);
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve();
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} fetching ${url}`);
     }
 
-    chrome.tabs.onUpdated.addListener(listener);
-  });
+    return await response.text();
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === "AbortError") {
+      throw new Error("Page load timeout");
+    }
+    throw error;
+  }
 }
 
-function extractFromTab(tabId, section, nowMs) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(
-      tabId,
-      {
-        type: "rollingVine.extractPage",
-        section,
-        nowMs
-      },
-      (response) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(new Error(`Unable to communicate with page parser: ${err.message}`));
-          return;
-        }
-        resolve(response);
-      }
-    );
-  });
-}
-
-async function extractFromTabWithRetries(tabId, section, nowMs) {
+async function fetchPageWithRetries(url) {
   let lastError = null;
 
-  for (let attempt = 1; attempt <= EXTRACT_ATTEMPTS; attempt += 1) {
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
     try {
-      const response = await extractFromTab(tabId, section, nowMs);
-      const needsRetry =
-        !response ||
-        response.ok === false ||
-        !Array.isArray(response.items) ||
-        response.items.length === 0;
-
-      if (!needsRetry) {
-        return response;
-      }
-
-      lastError = new Error(response && response.reason ? response.reason : "no parsable records found");
-
-      if (attempt < EXTRACT_ATTEMPTS) {
-        await randomDelay(EXTRACT_RETRY_DELAY_MS, EXTRACT_RETRY_DELAY_MS + 400);
-      }
+      return await fetchPage(url);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      if (attempt < EXTRACT_ATTEMPTS) {
-        await randomDelay(EXTRACT_RETRY_DELAY_MS, EXTRACT_RETRY_DELAY_MS + 400);
+      if (attempt < FETCH_ATTEMPTS) {
+        await randomDelay(FETCH_RETRY_DELAY_MS, FETCH_RETRY_DELAY_MS + 400);
       }
     }
   }
 
-  throw lastError || new Error("Unable to extract page data");
+  throw lastError || new Error("Unable to fetch page");
 }
 
-function closeTabSafe(tabId) {
-  return new Promise((resolve) => {
-    chrome.tabs.remove(tabId, () => resolve());
-  });
+function extractTimestamps(html) {
+  const timestamps = [];
+  const seen = new Set();
+  const regex = /data-order-timestamp\s*=\s*"(\d+)"/g;
+  let match;
+
+  while ((match = regex.exec(html)) !== null) {
+    const dateMs = Number(match[1]);
+    if (dateMs > 0 && !seen.has(dateMs)) {
+      seen.add(dateMs);
+      timestamps.push(dateMs);
+    }
+  }
+
+  return timestamps.sort((a, b) => b - a);
+}
+
+function detectNextPage(html) {
+  const paginationMatch = html.match(/class\s*=\s*"[^"]*a-pagination[^"]*"[\s\S]*?<\/ul>/i);
+  if (!paginationMatch) {
+    return false;
+  }
+  const paginationHtml = paginationMatch[0];
+  const lastLiMatch = paginationHtml.match(/<li[^>]*class\s*=\s*"[^"]*a-last[^"]*"[^>]*>/i);
+  if (!lastLiMatch) {
+    return false;
+  }
+  return !(/a-disabled/.test(lastLiMatch[0]));
+}
+
+function detectSafetyStop(html) {
+  if (/name\s*=\s*"captchacharacters"/i.test(html) ||
+    /action\s*=\s*"[^"]*validateCaptcha/i.test(html)) {
+    return "captcha detected";
+  }
+
+  if (/action\s*=\s*"[^"]*signin/i.test(html) ||
+    /type\s*=\s*"password"/i.test(html)) {
+    return "login required or session expired";
+  }
+
+  const lowerHtml = html.toLowerCase();
+  if (lowerHtml.includes("enter the characters you see") || lowerHtml.includes("captcha")) {
+    return "captcha text detected";
+  }
+
+  return null;
 }
 
 function randomDelay(minMs, maxMs) {
@@ -442,19 +431,6 @@ function notifyAccount(tabId, message) {
   }
   chrome.tabs.sendMessage(tabId, message, () => {
     void chrome.runtime.lastError;
-  });
-}
-
-function restoreAccountTabFocus(tabId) {
-  if (typeof tabId !== "number") {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve) => {
-    chrome.tabs.update(tabId, { active: true }, () => {
-      void chrome.runtime.lastError;
-      resolve();
-    });
   });
 }
 

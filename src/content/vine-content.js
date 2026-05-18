@@ -1,7 +1,5 @@
 (() => {
   const ACCOUNT_PATH_REGEX = /^\/vine\/account\/?$/;
-  const ORDERS_PATH = "/vine/orders";
-  const REVIEWS_PATH = "/vine/vine-reviews";
   const LOG_PREFIX = "[rolling-vine/content]";
   const HYDRATE_RETRY_DELAYS_MS = [0, 250, 800, 1600];
   const START_SYNC_ATTEMPTS = 3;
@@ -31,12 +29,6 @@
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!message || !message.type) {
         return;
-      }
-
-      if (message.type === "rollingVine.extractPage") {
-        const result = extractPageData(message.section, message.nowMs);
-        sendResponse(result);
-        return true;
       }
 
       if (message.type === "rollingVine.syncProgress" || message.type === "rollingVine.syncFinished" || message.type === "rollingVine.syncFailed") {
@@ -175,14 +167,6 @@
     return ACCOUNT_PATH_REGEX.test(location.pathname);
   }
 
-  function isOrdersPage() {
-    return location.pathname === ORDERS_PATH;
-  }
-
-  function isReviewsPage() {
-    return location.pathname === REVIEWS_PATH && /review-type=completed/.test(location.search);
-  }
-
   function inferSafeStopErrorCode(lastError) {
     const normalized = RollingVineCore.normalizeText(lastError || "");
 
@@ -224,123 +208,6 @@
     }
 
     return ui.safeStoppedDefault;
-  }
-
-  function detectSafetyStop() {
-    const text = document.body ? document.body.textContent || "" : "";
-    const normalized = RollingVineCore.normalizeText(text);
-
-    if (document.querySelector('input[name="captchacharacters"], form[action*="validateCaptcha"]')) {
-      return "captcha detected";
-    }
-
-    if (document.querySelector('form[action*="signin"], input[type="password"]')) {
-      return "login required or session expired";
-    }
-
-    if (normalized.includes("enter the characters you see") || normalized.includes("captcha")) {
-      return "captcha text detected";
-    }
-
-    return null;
-  }
-
-  function extractPageData(section, nowMs) {
-    const safetyIssue = detectSafetyStop();
-    if (safetyIssue) {
-      return { ok: false, reason: safetyIssue };
-    }
-
-    if (section === "orders" && !isOrdersPage()) {
-      return { ok: false, reason: "unexpected page while scanning orders" };
-    }
-
-    if (section === "reviews" && !isReviewsPage()) {
-      return { ok: false, reason: "unexpected page while scanning completed reviews" };
-    }
-
-    const items = section === "orders" ? extractOrderItems() : extractReviewItems();
-
-    if (items.length === 0) {
-      return { ok: false, reason: "no parsable records found" };
-    }
-
-    const cutoffMs = Number(nowMs) - 90 * 24 * 60 * 60 * 1000;
-    const oldestMs = Math.min(...items.map((item) => item.dateMs));
-
-    return {
-      ok: true,
-      items,
-      reachedOlderThan90: oldestMs < cutoffMs,
-      hasNextPage: hasNextPage(),
-      recordCount: items.length
-    };
-  }
-
-  function extractOrderItems() {
-    const items = [];
-    const seen = new Set();
-
-    const selectors = [
-      'td.vvp-orders-table--text-col[data-order-timestamp]',
-      'span[data-order-timestamp]'
-    ];
-
-    for (const selector of selectors) {
-      for (const node of document.querySelectorAll(selector)) {
-        const timestamp = node.getAttribute('data-order-timestamp');
-        const dateMs = Number(timestamp);
-
-        if (!dateMs || dateMs <= 0) continue;
-
-        const text = (node.textContent || '').trim();
-        const id = `${dateMs}:order`;
-
-        if (seen.has(id)) continue;
-        seen.add(id);
-
-        items.push({ dateMs, snippet: text });
-      }
-    }
-
-    return items.sort((a, b) => b.dateMs - a.dateMs);
-  }
-
-  function extractReviewItems() {
-    const items = [];
-    const seen = new Set();
-
-    const selectors = [
-      'td.vvp-reviews-table--text-col[data-order-timestamp]',
-      'span[data-order-timestamp]'
-    ];
-
-    for (const selector of selectors) {
-      for (const node of document.querySelectorAll(selector)) {
-        const timestamp = node.getAttribute('data-order-timestamp');
-        const dateMs = Number(timestamp);
-
-        if (!dateMs || dateMs <= 0) continue;
-
-        const text = (node.textContent || '').trim();
-        const id = `${dateMs}:review`;
-
-        if (seen.has(id)) continue;
-        seen.add(id);
-
-        items.push({ dateMs, snippet: text });
-      }
-    }
-
-    return items.sort((a, b) => b.dateMs - a.dateMs);
-  }
-
-  function hasNextPage() {
-    const nextLi = document.querySelector('ul.a-pagination li.a-last');
-    if (!nextLi) {
-      return false;
-    }
-    return !nextLi.classList.contains("a-disabled");
   }
 
   async function mountAccountUI() {
