@@ -14,6 +14,7 @@
   let rootEl = null;
   let lastKnownHref = location.href;
   let currentSettings = null;
+  let delegationAttached = false;
   let ui = RollingVineI18n.resolveUiStrings(location.hostname);
 
   window.addEventListener("error", (event) => {
@@ -95,6 +96,7 @@
       scheduleAccountHydration();
     } else {
       rootEl = null;
+      delegationAttached = false;
     }
   }
 
@@ -242,15 +244,18 @@
   async function mountAccountUI() {
     if (rootEl && !rootEl.isConnected) {
       rootEl = null;
+      delegationAttached = false;
     }
 
     if (rootEl && rootEl.isConnected) {
+      ensureDelegation();
       return;
     }
 
     const existingRoot = document.querySelector(".rolling-vine-root");
     if (existingRoot) {
       rootEl = existingRoot;
+      ensureDelegation();
       return;
     }
 
@@ -295,56 +300,61 @@
       syncImg.src = chrome.runtime.getURL("/content/assets/sync.svg");
     }
 
-    if (!rootEl.__syncBtnDelegated) {
-      rootEl.addEventListener("click", async (event) => {
-        const settingsBtn = event.target.closest(".rolling-vine-settings-btn");
-        if (settingsBtn) {
-          sendRuntimeMessage({ type: "rollingVine.openOptions" }).catch(() => undefined);
-          return;
-        }
+    ensureDelegation();
+    observeDarkModeChanges();
+  }
 
-        const syncBtn = event.target.closest(".rolling-vine-sync-btn");
-        if (!syncBtn) {
-          return;
-        }
-
-        syncBtn.disabled = true;
-        syncBtn.classList.add("is-syncing");
-        const syncStage = rootEl.querySelector("[data-sync-stage]");
-        if (syncStage) {
-          syncStage.textContent = ui.startingSync;
-        }
-        try {
-          const response = await sendRuntimeMessage({
-            type: "rollingVine.startSync",
-            origin: location.origin,
-            pageUrl: location.href
-          });
-          if (response && response.ok === false) {
-            throw new Error(response.error || "Unknown sync start error");
-          }
-          if (response && response.state && response.state.isRunning && syncStage) {
-            syncStage.textContent = ui.syncingOrders;
-          }
-        } catch (error) {
-          const reason = error && error.message ? error.message : String(error);
-          console.error(`${LOG_PREFIX} sync click failed`, error && error.stack ? error.stack : error);
-          syncBtn.classList.remove("is-syncing");
-
-          if (syncStage) {
-            syncStage.textContent = `${ui.syncStartFailedPrefix}: ${reason}`;
-          }
-        } finally {
-          setTimeout(() => {
-            hydrateAccountUI().catch(() => undefined);
-          }, 450);
-        }
-      });
-
-      rootEl.__syncBtnDelegated = true;
+  function ensureDelegation() {
+    if (delegationAttached || !rootEl) {
+      return;
     }
 
-    observeDarkModeChanges();
+    rootEl.addEventListener("click", async (event) => {
+      const settingsBtn = event.target.closest(".rolling-vine-settings-btn");
+      if (settingsBtn) {
+        sendRuntimeMessage({ type: "rollingVine.openOptions" }).catch(() => undefined);
+        return;
+      }
+
+      const syncBtn = event.target.closest(".rolling-vine-sync-btn");
+      if (!syncBtn) {
+        return;
+      }
+
+      syncBtn.disabled = true;
+      syncBtn.classList.add("is-syncing");
+      const syncStage = rootEl.querySelector("[data-sync-stage]");
+      if (syncStage) {
+        syncStage.textContent = ui.startingSync;
+      }
+      try {
+        const response = await sendRuntimeMessage({
+          type: "rollingVine.startSync",
+          origin: location.origin,
+          pageUrl: location.href
+        });
+        if (response && response.ok === false) {
+          throw new Error(response.error || "Unknown sync start error");
+        }
+        if (response && response.state && response.state.isRunning && syncStage) {
+          syncStage.textContent = ui.syncingOrders;
+        }
+      } catch (error) {
+        const reason = error && error.message ? error.message : String(error);
+        console.error(`${LOG_PREFIX} sync click failed`, error && error.stack ? error.stack : error);
+        syncBtn.classList.remove("is-syncing");
+
+        if (syncStage) {
+          syncStage.textContent = `${ui.syncStartFailedPrefix}: ${reason}`;
+        }
+      } finally {
+        setTimeout(() => {
+          hydrateAccountUI().catch(() => undefined);
+        }, 450);
+      }
+    });
+
+    delegationAttached = true;
   }
 
   function findAccountAnchor() {
@@ -563,6 +573,7 @@
   async function hydrateAccountUI() {
     if (rootEl && !rootEl.isConnected) {
       rootEl = null;
+      delegationAttached = false;
     }
 
     if (!rootEl) {
@@ -587,6 +598,7 @@
 
     if (!syncValue || !syncStage || !syncBtn) {
       rootEl = null;
+      delegationAttached = false;
       return;
     }
 
