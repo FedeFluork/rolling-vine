@@ -50,6 +50,8 @@
       riskDiv.textContent = getRiskLabel(period, pm.status);
       card.appendChild(riskDiv);
 
+      card.appendChild(buildProgressBar(pm, ui));
+
       const infoDiv = document.createElement("div");
       infoDiv.className = "rv-popup-card-status-info";
       infoDiv.textContent = computeStatusInfo(pm);
@@ -58,6 +60,70 @@
       card.classList.toggle("is-risk", pm.status === "at-risk");
       cardsEl.appendChild(card);
     }
+  }
+
+  function buildProgressBar(pm, uiStrings) {
+    const orders = pm.orders || 0;
+    const reviews = pm.reviews || 0;
+    const hasApprovedData = "approvedReviews" in pm;
+    const approved = hasApprovedData ? (pm.approvedReviews || 0) : reviews;
+    const pending = Math.max(0, reviews - approved);
+    const remaining = Math.max(0, orders - reviews);
+    const total = approved + pending + remaining;
+
+    const bar = document.createElement("div");
+    bar.className = "rv-progress-bar";
+
+    if (total === 0) {
+      return bar;
+    }
+
+    const segments = [
+      { className: "rv-progress-segment--approved", value: approved, label: uiStrings.progressBar.approved },
+      { className: "rv-progress-segment--pending", value: pending, label: uiStrings.progressBar.pending },
+      { className: "rv-progress-segment--remaining", value: remaining, label: uiStrings.progressBar.remaining }
+    ];
+
+    for (const seg of segments) {
+      if (seg.value === 0) continue;
+      const pct = (seg.value / total) * 100;
+      const el = document.createElement("div");
+      el.className = `rv-progress-segment ${seg.className}`;
+      el.style.width = `${pct}%`;
+      el.setAttribute("data-tooltip", `${seg.label}: ${seg.value}`);
+
+      const tooltip = document.createElement("span");
+      tooltip.className = "rv-progress-tooltip";
+      tooltip.textContent = `${seg.label}: ${seg.value}`;
+      el.appendChild(tooltip);
+
+      el.addEventListener("mouseenter", () => {
+        tooltip.style.removeProperty("left");
+        tooltip.style.removeProperty("--tooltip-arrow-shift");
+        requestAnimationFrame(() => {
+          const rect = tooltip.getBoundingClientRect();
+          const MARGIN = 6;
+          if (rect.left < MARGIN) {
+            const shift = Math.ceil(MARGIN - rect.left);
+            tooltip.style.left = `calc(50% + ${shift}px)`;
+            tooltip.style.setProperty("--tooltip-arrow-shift", `${shift}px`);
+          } else if (rect.right > window.innerWidth - MARGIN) {
+            const shift = Math.ceil(rect.right - (window.innerWidth - MARGIN));
+            tooltip.style.left = `calc(50% - ${shift}px)`;
+            tooltip.style.setProperty("--tooltip-arrow-shift", `-${shift}px`);
+          }
+        });
+      });
+
+      bar.appendChild(el);
+    }
+
+    const threshold = document.createElement("div");
+    threshold.className = "rv-progress-threshold";
+    threshold.style.left = "60%";
+    bar.appendChild(threshold);
+
+    return bar;
   }
 
   function makeRow(label, value) {

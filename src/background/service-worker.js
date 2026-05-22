@@ -8,7 +8,9 @@ const PAGE_SETTLE_MAX_MS = 1400;
 const PAGE_LOAD_TIMEOUT_MS = 25000;
 const FETCH_ATTEMPTS = 3;
 const FETCH_RETRY_DELAY_MS = 900;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const LOG_PREFIX = "[rolling-vine/bg]";
+const DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 const SAFE_STOP_ERROR_CODES = {
   captcha: "captcha",
   sessionExpired: "session-expired",
@@ -98,12 +100,11 @@ async function runSync({ origin, accountTabId }) {
   console.log(`${LOG_PREFIX} runSync started`, { origin, accountTabId });
   const startedAt = new Date().toISOString();
   const nowMs = Date.now();
-  const ordersCutoffMs = nowMs - 90 * 24 * 60 * 60 * 1000;
   const syncCache = await RollingVineStorage.getSyncCache();
   const lastOrdersTopTimestamp = Number(syncCache && syncCache.lastOrdersTopTimestamp) || null;
   const cachedOrdersScannedCount = Number(syncCache && syncCache.lastOrdersScannedCount) || 0;
   const cachedOrdersDateMsList = normalizeTimestampList(syncCache && syncCache.lastOrdersDateMsList)
-    .filter((timestamp) => timestamp >= ordersCutoffMs);
+    .filter((timestamp) => isWithinDaysBucket(timestamp, nowMs, 90));
   const hasOrdersBaseline =
     lastOrdersTopTimestamp &&
     cachedOrdersScannedCount > 0 &&
@@ -129,13 +130,14 @@ async function runSync({ origin, accountTabId }) {
     });
 
     let ordersDateMsForMetrics = normalizeTimestampList(ordersResult.dateMsList)
-      .filter((timestamp) => timestamp >= ordersCutoffMs);
+      .filter((timestamp) => isWithinDaysBucket(timestamp, nowMs, 90));
 
     if (ordersResult.stopReason === "matched-last-orders-timestamp" && hasOrdersBaseline) {
       const ordersDeltaDateMsList = ordersDateMsForMetrics
         .filter((timestamp) => timestamp > lastOrdersTopTimestamp);
-      ordersDateMsForMetrics = mergeUniqueTimestamps(cachedOrdersDateMsList, ordersDeltaDateMsList)
-        .filter((timestamp) => timestamp >= ordersCutoffMs);
+      ordersDateMsForMetrics = cachedOrdersDateMsList
+        .concat(ordersDeltaDateMsList)
+        .filter((timestamp) => isWithinDaysBucket(timestamp, nowMs, 90));
     }
 
     const ordersTopTimestamp = ordersDateMsForMetrics.length > 0
@@ -168,10 +170,12 @@ async function runSync({ origin, accountTabId }) {
       nowMs
     });
 
+    const bucketedNowMs = startOfDayMs(nowMs) || nowMs;
     const metrics = RollingVineCore.buildMetrics(
-      ordersDateMsForMetrics,
-      reviewsResult.dateMsList,
-      nowMs
+      toStartOfDayTimestampList(ordersDateMsForMetrics),
+      toStartOfDayTimestampList(reviewsResult.dateMsList),
+      bucketedNowMs,
+      toStartOfDayTimestampList(reviewsResult.approvedDateMsList)
     );
 
     metrics.syncMeta = {
@@ -245,7 +249,8 @@ function classifySafeStopError(error) {
 }
 
 async function scanSection({ origin, section, accountTabId, nowMs, ordersCheckpointTimestamp = null }) {
-  const dateMsSet = new Set();
+  const dateMsList = [];
+  const approvedDateMsList = [];
   const normalizedOrdersCheckpointTimestamp =
     section === "orders" ? Number(ordersCheckpointTimestamp) || null : null;
   let page = 1;
@@ -273,7 +278,14 @@ async function scanSection({ origin, section, accountTabId, nowMs, ordersCheckpo
     }
 
     for (const dateMs of timestamps) {
-      dateMsSet.add(dateMs);
+      dateMsList.push(dateMs);
+    }
+
+    if (section === "reviews") {
+      const approvedTs = extractApprovedTimestamps(html);
+      for (const dateMs of approvedTs) {
+        approvedDateMsList.push(dateMs);
+      }
     }
 
     if (
@@ -285,9 +297,9 @@ async function scanSection({ origin, section, accountTabId, nowMs, ordersCheckpo
       break;
     }
 
-    const cutoffMs = nowMs - 90 * 24 * 60 * 60 * 1000;
     const oldestMs = Math.min(...timestamps);
-    if (oldestMs < cutoffMs) {
+    const oldestDaysAgo = daysAgoBucket(oldestMs, nowMs);
+    if (oldestDaysAgo !== null && oldestDaysAgo >= 90) {
       stopReason = "older-than-90-days";
       break;
     }
@@ -306,8 +318,9 @@ async function scanSection({ origin, section, accountTabId, nowMs, ordersCheckpo
   }
 
   return {
-    dateMsList: Array.from(dateMsSet),
-    topTimestamp: dateMsSet.size > 0 ? Math.max(...dateMsSet) : null,
+    dateMsList,
+    approvedDateMsList,
+    topTimestamp: dateMsList.length > 0 ? Math.max(...dateMsList) : null,
     pagesScanned: page,
     stopReason
   };
@@ -335,7 +348,7 @@ async function fetchPage(url) {
     const acceptLanguage = navigator.language || navigator.languages?.join(",") || "en-US,en;q=0.9";
     const response = await fetch(url, {
       headers: {
-        "User-Agent": navigator.userAgent,
+        "User-Agent": DESKTOP_USER_AGENT,
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": acceptLanguage,
         "Accept-Encoding": "gzip, deflate, br",
@@ -385,14 +398,30 @@ async function fetchPageWithRetries(url) {
 
 function extractTimestamps(html) {
   const timestamps = [];
-  const seen = new Set();
   const regex = /data-order-timestamp\s*=\s*"(\d+)"/g;
   let match;
 
   while ((match = regex.exec(html)) !== null) {
     const dateMs = Number(match[1]);
-    if (dateMs > 0 && !seen.has(dateMs)) {
-      seen.add(dateMs);
+    if (dateMs > 0) {
+      timestamps.push(dateMs);
+    }
+  }
+
+  return timestamps.sort((a, b) => b - a);
+}
+
+function extractApprovedTimestamps(html) {
+  const timestamps = [];
+  const segments = html.split(/data-order-timestamp\s*=\s*"/);
+
+  for (let i = 1; i < segments.length; i++) {
+    const closingQuote = segments[i].indexOf('"');
+    if (closingQuote === -1) continue;
+    const tsStr = segments[i].substring(0, closingQuote);
+    const dateMs = Number(tsStr);
+    if (dateMs <= 0) continue;
+    if (/data-review-content/.test(segments[i])) {
       timestamps.push(dateMs);
     }
   }
@@ -454,6 +483,44 @@ function normalizeTimestampList(value) {
   return value
     .map((item) => Number(item))
     .filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0);
+}
+
+function startOfDayMs(value) {
+  const timestamp = Number(value);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) {
+    return null;
+  }
+
+  const date = new Date(timestamp);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+function daysAgoBucket(dateMs, nowMs) {
+  const normalizedDateMs = startOfDayMs(dateMs);
+  const normalizedNowMs = startOfDayMs(nowMs);
+
+  if (normalizedDateMs === null || normalizedNowMs === null) {
+    return null;
+  }
+
+  const delta = normalizedNowMs - normalizedDateMs;
+  if (delta < 0) {
+    return null;
+  }
+
+  return Math.floor(delta / MS_PER_DAY);
+}
+
+function isWithinDaysBucket(dateMs, nowMs, days) {
+  const age = daysAgoBucket(dateMs, nowMs);
+  return age !== null && age < days;
+}
+
+function toStartOfDayTimestampList(value) {
+  return normalizeTimestampList(value)
+    .map((timestamp) => startOfDayMs(timestamp))
+    .filter((timestamp) => timestamp !== null);
 }
 
 function mergeUniqueTimestamps(baseList, deltaList) {

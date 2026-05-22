@@ -46,6 +46,11 @@
       safeStoppedDefault: "Sync stopped safely. Retry sync in a few moments.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 more order allowed" : `${count} more orders allowed`),
       moreReviewsNeeded: (count) => (count === 1 ? "1 more review needed" : `${count} more reviews needed`),
+      progressBar: {
+        approved: "Approved",
+        pending: "Pending approval",
+        remaining: "Still to review"
+      },
       popup: {
         noData: "No data yet. Run a sync from the Vine account page.",
         openAccount: "Open Vine Account",
@@ -105,6 +110,11 @@
       safeStoppedDefault: "Sincronizzazione interrotta in sicurezza. Riprova tra qualche istante.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 ordine in più consentito" : `${count} ordini in più consentiti`),
       moreReviewsNeeded: (count) => (count === 1 ? "1 recensione in più necessaria" : `${count} recensioni in più necessarie`),
+      progressBar: {
+        approved: "Approvate",
+        pending: "In attesa di approvazione",
+        remaining: "Ancora da recensire"
+      },
       popup: {
         noData: "Nessun dato disponibile. Esegui una sincronizzazione dalla pagina account Vine.",
         openAccount: "Apri Account Vine",
@@ -164,6 +174,11 @@
       safeStoppedDefault: "Sincronizacion interrumpida de forma segura. Reintenta en unos momentos.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 pedido mas permitido" : `${count} pedidos mas permitidos`),
       moreReviewsNeeded: (count) => (count === 1 ? "1 resena mas necesaria" : `${count} resenas mas necesarias`),
+      progressBar: {
+        approved: "Aprobadas",
+        pending: "Pendientes de aprobación",
+        remaining: "Aún por reseñar"
+      },
       popup: {
         noData: "Sin datos. Ejecuta una sincronización desde la página de cuenta Vine.",
         openAccount: "Abrir Cuenta Vine",
@@ -223,6 +238,11 @@
       safeStoppedDefault: "Synchronisierung sicher unterbrochen. Bitte in kurzer Zeit erneut versuchen.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 weitere Bestellung erlaubt" : `${count} weitere Bestellungen erlaubt`),
       moreReviewsNeeded: (count) => (count === 1 ? "1 weitere Rezension erforderlich" : `${count} weitere Rezensionen erforderlich`),
+      progressBar: {
+        approved: "Genehmigt",
+        pending: "Ausstehende Genehmigung",
+        remaining: "Noch zu rezensieren"
+      },
       popup: {
         noData: "Noch keine Daten. Führe eine Synchronisierung auf der Vine-Kontoseite durch.",
         openAccount: "Vine-Konto öffnen",
@@ -282,6 +302,11 @@
       safeStoppedDefault: "Synchronisation interrompue de facon securisee. Reessayez dans quelques instants.",
       moreOrdersAllowed: (count) => (count === 1 ? "1 commande supplementaire autorisee" : `${count} commandes supplementaires autorisees`),
       moreReviewsNeeded: (count) => (count === 1 ? "1 avis supplementaire necessaire" : `${count} avis supplementaires necessaires`),
+      progressBar: {
+        approved: "Approuvés",
+        pending: "En attente d'approbation",
+        remaining: "Encore à évaluer"
+      },
       popup: {
         noData: "Aucune donnée. Lancez une synchronisation depuis la page du compte Vine.",
         openAccount: "Ouvrir Compte Vine",
@@ -341,6 +366,11 @@
       safeStoppedDefault: "同期が安全に中断されました。しばらくしてから再試行してください。",
       moreOrdersAllowed: (count) => `あと${count}件の注文が可能`,
       moreReviewsNeeded: (count) => `あと${count}件のレビューが必要`,
+      progressBar: {
+        approved: "承認済み",
+        pending: "承認待ち",
+        remaining: "未レビュー"
+      },
       popup: {
         noData: "データがありません。Vineアカウントページから同期を実行してください。",
         openAccount: "Vineアカウントを開く",

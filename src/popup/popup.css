@@ -121,6 +121,100 @@ body {
   margin-top: 4px;
 }
 
+/* ─── Progress Bar ─── */
+.rv-progress-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: visible;
+  margin-top: 8px;
+  background: #e8e8e8;
+  position: relative;
+}
+
+.rv-progress-segment {
+  position: relative;
+  height: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.rv-progress-segment:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.rv-progress-segment:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.rv-progress-segment:only-child {
+  border-radius: 4px;
+}
+
+.rv-progress-segment:hover {
+  transform: scaleY(1.6);
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.rv-progress-segment--approved {
+  background: #2e7d32;
+}
+
+.rv-progress-segment--pending {
+  background: #f9a825;
+}
+
+.rv-progress-segment--remaining {
+  background: #9e9e9e;
+}
+
+.rv-progress-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) scaleY(0.625);
+  background: #333;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 3px 7px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 10;
+}
+
+.rv-progress-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: calc(50% - var(--tooltip-arrow-shift, 0px));
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #333;
+}
+
+.rv-progress-segment:hover .rv-progress-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) scaleY(0.625);
+}
+
+.rv-progress-threshold {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 5px;
+  background: #d32f2f;
+  border-radius: 1px;
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+}
+
 /* ─── No data ─── */
 .rv-popup-no-data {
   text-align: center;
@@ -178,6 +272,39 @@ body {
 
 .rv-popup.rv-dark .rv-popup-card-status-info {
   color: #999;
+}
+
+.rv-popup.rv-dark .rv-progress-bar {
+  background: #3a3a3a;
+}
+
+.rv-popup.rv-dark .rv-progress-segment--approved {
+  background: #4caf50;
+}
+
+.rv-popup.rv-dark .rv-progress-segment--pending {
+  background: #fbc02d;
+}
+
+.rv-popup.rv-dark .rv-progress-segment--remaining {
+  background: #757575;
+}
+
+.rv-popup.rv-dark .rv-progress-segment:hover {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.rv-popup.rv-dark .rv-progress-tooltip {
+  background: #eee;
+  color: #222;
+}
+
+.rv-popup.rv-dark .rv-progress-tooltip::after {
+  border-top-color: #eee;
+}
+
+.rv-popup.rv-dark .rv-progress-threshold {
+  background: #ff5252;
 }
 
 .rv-popup.rv-dark .rv-popup-no-data {

@@ -425,14 +425,18 @@
     syncValue.textContent = ui.never;
     lastSync.appendChild(syncValue);
 
+    const buttonsRow = document.createElement("div");
+    buttonsRow.className = "rolling-vine-buttons-row";
+    buttonsRow.appendChild(settingsBtn);
+    buttonsRow.appendChild(syncBtn);
+
     const syncGroup = document.createElement("div");
     syncGroup.className = "rolling-vine-sync-group";
-    syncGroup.appendChild(syncBtn);
+    syncGroup.appendChild(buttonsRow);
     syncGroup.appendChild(lastSync);
 
     const actionsWrap = document.createElement("div");
     actionsWrap.className = "rolling-vine-actions";
-    actionsWrap.appendChild(settingsBtn);
     actionsWrap.appendChild(syncGroup);
 
     headerRow.appendChild(titleWrap);
@@ -509,6 +513,7 @@
     card.appendChild(buildCardRow(ui.labels.reviews, "reviews", "0"));
     card.appendChild(buildCardRow(ui.labels.rate, "rate", ui.rateNA));
     card.appendChild(buildRiskRow(period));
+    card.appendChild(buildProgressBarRow());
     card.appendChild(buildStatusInfoRow());
 
     return card;
@@ -524,6 +529,13 @@
 
     row.appendChild(risk);
     return row;
+  }
+
+  function buildProgressBarRow() {
+    const bar = document.createElement("div");
+    bar.className = "rolling-vine-progress-bar";
+    bar.setAttribute("data-field", "progressBar");
+    return bar;
   }
 
   function buildCardRow(labelText, fieldName, valueText) {
@@ -651,6 +663,11 @@
         statusInfoField.textContent = computeStatusInfo(periodMetrics);
       }
 
+      const progressBarEl = card.querySelector('[data-field="progressBar"]');
+      if (progressBarEl) {
+        hydrateProgressBar(progressBarEl, periodMetrics);
+      }
+
       card.classList.toggle("is-risk", periodMetrics.status === "at-risk");
     }
   }
@@ -673,6 +690,63 @@
     }
 
     return "";
+  }
+
+  function hydrateProgressBar(barEl, pm) {
+    barEl.innerHTML = "";
+    const orders = pm.orders || 0;
+    const reviews = pm.reviews || 0;
+    const hasApprovedData = "approvedReviews" in pm;
+    const approved = hasApprovedData ? (pm.approvedReviews || 0) : reviews;
+    const pending = Math.max(0, reviews - approved);
+    const remaining = Math.max(0, orders - reviews);
+    const total = approved + pending + remaining;
+
+    if (total === 0) return;
+
+    const segments = [
+      { className: "rolling-vine-progress-segment--approved", value: approved, label: ui.progressBar.approved },
+      { className: "rolling-vine-progress-segment--pending", value: pending, label: ui.progressBar.pending },
+      { className: "rolling-vine-progress-segment--remaining", value: remaining, label: ui.progressBar.remaining }
+    ];
+
+    for (const seg of segments) {
+      if (seg.value === 0) continue;
+      const pct = (seg.value / total) * 100;
+      const el = document.createElement("div");
+      el.className = `rolling-vine-progress-segment ${seg.className}`;
+      el.style.width = `${pct}%`;
+
+      const tooltip = document.createElement("span");
+      tooltip.className = "rolling-vine-progress-tooltip";
+      tooltip.textContent = `${seg.label}: ${seg.value}`;
+      el.appendChild(tooltip);
+
+      el.addEventListener("mouseenter", () => {
+        tooltip.style.removeProperty("left");
+        tooltip.style.removeProperty("--tooltip-arrow-shift");
+        requestAnimationFrame(() => {
+          const rect = tooltip.getBoundingClientRect();
+          const MARGIN = 6;
+          if (rect.left < MARGIN) {
+            const shift = Math.ceil(MARGIN - rect.left);
+            tooltip.style.left = `calc(50% + ${shift}px)`;
+            tooltip.style.setProperty("--tooltip-arrow-shift", `${shift}px`);
+          } else if (rect.right > window.innerWidth - MARGIN) {
+            const shift = Math.ceil(rect.right - (window.innerWidth - MARGIN));
+            tooltip.style.left = `calc(50% - ${shift}px)`;
+            tooltip.style.setProperty("--tooltip-arrow-shift", `-${shift}px`);
+          }
+        });
+      });
+
+      barEl.appendChild(el);
+    }
+
+    const threshold = document.createElement("div");
+    threshold.className = "rolling-vine-progress-threshold";
+    threshold.style.left = "60%";
+    barEl.appendChild(threshold);
   }
 
   function getRiskLabel(period, status) {

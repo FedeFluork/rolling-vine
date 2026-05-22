@@ -27,9 +27,9 @@
   function emptyMetrics() {
     return {
       periods: {
-        90: { orders: 0, reviews: 0, rate: null, status: "ok" },
-        60: { orders: 0, reviews: 0, rate: null, status: "ok" },
-        30: { orders: 0, reviews: 0, rate: null, status: "ok" }
+        90: { orders: 0, reviews: 0, approvedReviews: 0, rate: null, status: "ok" },
+        60: { orders: 0, reviews: 0, approvedReviews: 0, rate: null, status: "ok" },
+        30: { orders: 0, reviews: 0, approvedReviews: 0, rate: null, status: "ok" }
       },
       generatedAt: null
     };
@@ -49,38 +49,55 @@
     return rate < RISK_THRESHOLD ? "at-risk" : "ok";
   }
 
-  function buildMetrics(orderDates, reviewDates, nowMs) {
+  function buildMetrics(orderDates, reviewDates, nowMs, approvedReviewDates) {
     const metrics = emptyMetrics();
 
     for (const dateMs of orderDates) {
       const age = daysAgoBucket(dateMs, nowMs);
-      if (age === null || age > 90) {
+      if (age === null || age >= 90) {
         continue;
       }
-      if (age <= 90) {
+      if (age < 90) {
         metrics.periods[90].orders += 1;
       }
-      if (age <= 60) {
+      if (age < 60) {
         metrics.periods[60].orders += 1;
       }
-      if (age <= 30) {
+      if (age < 30) {
         metrics.periods[30].orders += 1;
       }
     }
 
     for (const dateMs of reviewDates) {
       const age = daysAgoBucket(dateMs, nowMs);
-      if (age === null || age > 90) {
+      if (age === null || age >= 90) {
         continue;
       }
-      if (age <= 90) {
+      if (age < 90) {
         metrics.periods[90].reviews += 1;
       }
-      if (age <= 60) {
+      if (age < 60) {
         metrics.periods[60].reviews += 1;
       }
-      if (age <= 30) {
+      if (age < 30) {
         metrics.periods[30].reviews += 1;
+      }
+    }
+
+    const approvedDates = Array.isArray(approvedReviewDates) ? approvedReviewDates : [];
+    for (const dateMs of approvedDates) {
+      const age = daysAgoBucket(dateMs, nowMs);
+      if (age === null || age >= 90) {
+        continue;
+      }
+      if (age < 90) {
+        metrics.periods[90].approvedReviews += 1;
+      }
+      if (age < 60) {
+        metrics.periods[60].approvedReviews += 1;
+      }
+      if (age < 30) {
+        metrics.periods[30].approvedReviews += 1;
       }
     }
 
@@ -90,7 +107,7 @@
       periodMetrics.status = computeStatus(periodMetrics.rate);
     }
 
-    metrics.generatedAt = new Date(nowMs).toISOString();
+    metrics.generatedAt = new Date().toISOString();
     return metrics;
   }
 
